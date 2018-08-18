@@ -15,6 +15,9 @@ const uint64_t kRemoteAddr = 0xF0F0F0F0D2LL;
 #define MSG_BUTTON_1 0x30
 #define MSG_BUTTON_2 0x31
 
+#define MSG_BUTTON_DOWN 0x0
+#define MSG_BUTTON_UP   0x1
+
 #define BUTTON_PIN_1  23
 #define BUTTON_PIN_2  22
 #define LED_PIN       21
@@ -99,16 +102,18 @@ void loop() {
   rollingDist += int(float(dist - rollingDist) * 0.3);
   float distVal = float(min(max(map(rollingDist, 50, 500, 0, 255), 0), 255)) / 255.0;
 
-  // analogWrite(BLUE_LED_PIN, (1.0 - pow(distVal, 0.1)) * 255);
-
   if (button1.update()) {
     if (button1.fallingEdge()) {
-      txMessage(MSG_BUTTON_1, 0x0);
+      txMessage(MSG_BUTTON_1, MSG_BUTTON_DOWN);
+    } else if (button1.risingEdge()) {
+      txMessage(MSG_BUTTON_1, MSG_BUTTON_UP);
     }
   }
   if (button2.update()) {
     if (button2.fallingEdge()) {
-      txMessage(MSG_BUTTON_2, 0x0);
+      txMessage(MSG_BUTTON_2, MSG_BUTTON_DOWN);
+    } else if (button2.risingEdge()) {
+      txMessage(MSG_BUTTON_2, MSG_BUTTON_UP);
     }
   }
 
