@@ -92,10 +92,10 @@ void loop() {
   if (now - blinkTime > 500) {
     blinkTime = now;
     ledsHigh = !ledsHigh;
-    if (now - receiveTime < 500) {
+    if (now - receiveTime < 2000) {
       ledsHigh = true;
     }
-    analogWrite(LED_PIN, ledsHigh ? 150 : 50);
+    analogWrite(LED_PIN, ledsHigh ? 100 : 50);
   }
 
   int dist = distSensor.readRangeContinuousMillimeters();

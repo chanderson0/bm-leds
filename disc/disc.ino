@@ -39,12 +39,15 @@ enum DiscState
   NumDiscStates = 2
 };
 
-DiscState state = DiscPatterns;
+DiscState state = DiscGames;
 
 uint8_t curPattern = 0;
 uint8_t prevPattern = 0;
 uint8_t patternAmt = 255;
 bool rotatingPattern = true;
+unsigned long rotateChangedTime = 0;
+
+uint8_t curGame = 0;
 
 // Borrowed from https://learn.adafruit.com/twinkling-led-parasol/code
 extern const TProgmemRGBGradientPalettePtr gGradientPalettes[];
@@ -58,6 +61,9 @@ CRGBPalette16 gTargetPalette(gGradientPalettes[0]);
 
 void setup()
 {
+  Serial.begin(9600);
+
+  Serial.println("Start init");
   Serial.println("Starting radio...");
   radio.begin();
   radio.setPALevel(RF24_PA_LOW);
@@ -115,6 +121,11 @@ void setup()
   patterns[kNumPatterns++] = new Pattern7();
   patterns[kNumPatterns++] = new Pattern8();
   patterns[kNumPatterns++] = new Pattern9();
+
+  randomSeed(analogRead(0));
+  games[kNumGames++] = new TextGame();
+  games[kNumGames++] = new SpinGame();
+  games[0]->start(context);
 
   context.curPalette = &gCurrentPalette;
 
@@ -194,15 +205,38 @@ void advancePalette()
   Serial.println(gCurrentPaletteNumber);
 }
 
+void advanceGame()
+{
+  curGame = addmod8(curGame, 1, kNumGames);
+  games[curGame]->start(context);
+
+  Serial.print("Advancing game to: ");
+  Serial.println(curGame);
+}
+
+void advanceState()
+{
+  state = (DiscState)addmod8((uint8_t)state, 1, NumDiscStates);
+
+  if (state == DiscGames)
+  {
+    games[curGame]->start(context);
+  }
+
+  Serial.print("State is now: ");
+  Serial.println(state);
+}
+
 void toggleRotate()
 {
   rotatingPattern = !rotatingPattern;
+  rotateChangedTime = now;
 
   Serial.print("Toggling rotate to: ");
   Serial.println(rotatingPattern ? "on" : "off");
 }
 
-void handleButtons()
+void drawPatterns()
 {
   if (now - context.button1DownTime > 100 && !context.button1DownHandled)
   {
@@ -230,10 +264,7 @@ void handleButtons()
     }
     context.button2DownHandled = true;
   }
-}
 
-void drawPatterns()
-{
   EVERY_N_SECONDS(SCENE_TIME)
   {
     if (rotatingPattern)
@@ -271,19 +302,77 @@ void drawPatterns()
   }
 }
 
-unsigned long lastFrameMicros = 0;
-unsigned long long elapsedMicros = 0x88888888;
+void drawGames()
+{
+  if (now - context.button1DownTime > 100 && !context.button1DownHandled)
+  {
+    if (!context.button2DownHandled)
+    {
+      context.button1DownHandled = true;
+      context.button2DownHandled = true;
+      advanceGame();
+    }
+  }
+  if (now - context.button2DownTime > 100 && !context.button2DownHandled)
+  {
+    if (!context.button1DownHandled && context.button1State)
+    {
+      context.button1DownHandled = true;
+      context.button2DownHandled = true;
+      advanceGame();
+    }
+  }
+
+  games[curGame]->draw(leds, context);
+}
+
+void handleMetaButtons()
+{
+  if (context.button1State && context.button2State && now - context.button1DownTime > 3000 && now - context.button2DownTime > 3000)
+  {
+    advanceState();
+    context.button1DownTime = now;
+    context.button2DownTime = now;
+  }
+}
+
+void drawMeta()
+{
+  // TODO: fix
+  // if (now > 1500 && now - rotateChangedTime < 1500)
+  // {
+  //   int diff = now - rotateChangedTime;
+  //   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+  //   {
+  //     uint8_t r = context.pixelCoordsPolar[i][0];
+  //     // uint8_t t = context.pixelCoordsPolar[i][1];
+
+  //     if (r > 200)
+  //     {
+  //       CRGB blendColor = CHSV(0, 0, rotatingPattern ? 255 : 0);
+  //       leds[i] = blend(leds[i], blendColor, map(diff, 0, 1500, 0, r));
+  //     }
+  //   }
+  // }
+}
+
 void loop()
 {
   now = millis();
   context.elapsed = now;
 
-  handleButtons();
+  handleMetaButtons();
 
   if (state == DiscPatterns)
   {
     drawPatterns();
   }
+  else if (state == DiscGames)
+  {
+    drawGames();
+  }
+
+  drawMeta();
 
   FastLED.show();
 
