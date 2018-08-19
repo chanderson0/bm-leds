@@ -2,8 +2,9 @@
 #define Games_h
 
 #include "FastLED.h"
-#include "types.h"
 #include "Adafruit_GFX.h"
+
+#include "types.h"
 
 class Game
 {
@@ -27,8 +28,14 @@ public:
   void draw(CRGB *leds, LEDContext &context) override;
 
 private:
-  float startAngle, curAngle, endAngle;
+  CRGBPalette16 palette;
+
+  float startAngle = 0, curAngle = 0, endAngle;
   uint16_t duration;
+
+  bool isClose = false;
+  uint32_t microsCloseEnough = 0;
+  unsigned long lastFrameTime = 0;
 };
 
 class MemoryPanel : public Adafruit_GFX
@@ -44,6 +51,13 @@ private:
   uint16_t **screen;
 };
 
+enum EightBallState
+{
+  EightBallBoot,
+  EightBallIdle,
+  EightBallText
+};
+
 class TextGame : public Game
 {
 public:
@@ -52,8 +66,23 @@ public:
   void draw(CRGB *leds, LEDContext &context) override;
 
 private:
+  void setState(EightBallState newState, LEDContext &context);
+  void newPrediction(LEDContext &context);
+  void drawPanel(CRGB *leds, LEDContext &context);
+
+  EightBallState state;
+  unsigned long stateStartTime;
+
+  unsigned long closeEnoughStart;
+  bool isClose;
+
+  int prevX;
+  int loops;
+
   MemoryPanel *panel;
   String curString;
+
+  CRGBPalette16 palette;
 };
 
 #endif

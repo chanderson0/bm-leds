@@ -42,8 +42,10 @@ typedef struct {
   unsigned long elapsed = 0;
   unsigned long curSceneStart = 0;
 
-  uint8_t pixelCoords[NUM_PIXELS][2];
-  uint8_t pixelCoordsPolar[NUM_PIXELS][2];
+  uint8_t pixelCoords[NUM_PIXELS][2]; // x, y => 0-255
+  uint8_t pixelCoordsPolar[NUM_PIXELS][2]; // r, theta => 0-255
+  float pixelCoordsf[NUM_PIXELS][2]; // x, y => -0.5->0.5
+  float pixelCoordsPolarf[NUM_PIXELS][2]; // r, theta => 0-0.5, 0-2pi
   CRGBPalette16 *curPalette;
 
   // Remote data
