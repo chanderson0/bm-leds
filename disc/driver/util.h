@@ -1,46 +1,24 @@
-float easeInQuad(float t, float b, float c, float d)
-{
-  if (d == 0)
-  {
-    return 0;
-  }
-  return c * (t /= d) * t + b;
-}
-float easeOutQuad(float t, float b, float c, float d)
-{
-  if (d == 0)
-  {
-    return 0;
-  }
-  return -c * (t /= d) * (t - 2) + b;
-}
+#ifndef util_h
+#define util_h
 
-float easeInOutQuad(float t, float b, float c, float d)
-{
-  if (d == 0)
-  {
-    return 0;
-  }
-  if ((t /= d / 2) < 1)
-  {
-    return c / 2 * t * t + b;
+#include "FastLED.h"
+
+#define RUN_ONCE(runcode)     \
+  {                           \
+    static bool code_ran = 0; \
+    if (!code_ran)            \
+    {                         \
+      \ 
+        code_ran = 1;         \
+      runcode;                \
+    }                         \
   }
 
-  return -c / 2 * ((--t) * (t - 2) - 1) + b;
-}
+float easeInQuad(float t, float b, float c, float d);
+float easeOutQuad(float t, float b, float c, float d);
+float easeInOutQuad(float t, float b, float c, float d);
 
-float angleDiff(float x, float y)
-{
-  float arg;
-
-  arg = fmod(y - x, M_PI * 2.0);
-  if (arg < 0)
-    arg = arg + M_PI * 2.0;
-  if (arg > M_PI)
-    arg = arg - M_PI * 2.0;
-
-  return -arg;
-}
+float angleDiff(float x, float y);
 
 inline CRGB convert565(uint16_t src)
 {
@@ -55,6 +33,9 @@ inline uint16_t convert888(const CRGB &src)
   return ((src.r & 0b11111000) << 8) | ((src.g & 0b11111100) << 3) | (src.b >> 3);
 }
 
-inline float randFloat() {
+inline float randFloat()
+{
   return (float)random(100000) / 100000.0f;
 }
+
+#endif

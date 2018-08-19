@@ -5,6 +5,7 @@
 #include "RF24.h"
 
 #include "types.h"
+#include "memory_panel.h"
 #include "patterns.h"
 #include "games.h"
 #include "palettes.h"
@@ -40,12 +41,13 @@ enum DiscState
   NumDiscStates = 2
 };
 
-DiscState state = DiscGames;
+DiscState state = DiscPatterns;
 
 uint8_t curPattern = 0;
 uint8_t prevPattern = 0;
 uint8_t patternAmt = 255;
 bool rotatingPattern = true;
+// bool rotatingPattern = false;
 unsigned long rotateChangedTime = 0;
 
 uint8_t curGame = 0;
@@ -120,6 +122,7 @@ void setup()
   context.sharedPanel = new MemoryPanel(32, 32);
   context.curPalette = &gCurrentPalette;
 
+  patterns[kNumPatterns++] = new Pattern11();
   patterns[kNumPatterns++] = new Pattern0();
   patterns[kNumPatterns++] = new Pattern1();
   patterns[kNumPatterns++] = new Pattern2();
@@ -130,6 +133,7 @@ void setup()
   patterns[kNumPatterns++] = new Pattern7();
   patterns[kNumPatterns++] = new Pattern8();
   patterns[kNumPatterns++] = new Pattern9();
+  patterns[kNumPatterns++] = new Pattern10();
 
   randomSeed(analogRead(0));
   games[kNumGames++] = new Starfish();

@@ -2,9 +2,9 @@
 #define Games_h
 
 #include "FastLED.h"
-#include "Adafruit_GFX.h"
 
 #include "types.h"
+#include "memory_panel.h"
 
 class Game
 {
@@ -36,19 +36,6 @@ private:
   bool isClose = false;
   uint32_t microsCloseEnough = 0;
   unsigned long lastFrameTime = 0;
-};
-
-class MemoryPanel : public Adafruit_GFX
-{
-public:
-  MemoryPanel(uint16_t width, uint16_t height);
-  virtual void drawPixel(int16_t x, int16_t y, uint16_t color) override;
-  uint16_t sample(float x, float y, bool blur = false);
-  uint16_t get(uint16_t x, uint16_t y);
-  void debug();
-
-private:
-  uint16_t **screen;
 };
 
 enum EightBallState
