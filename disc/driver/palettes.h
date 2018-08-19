@@ -16,4 +16,6 @@ DECLARE_GRADIENT_PALETTE(Paired_05_gp);
 extern const TProgmemRGBGradientPalettePtr gGradientPalettes[];
 extern const uint8_t gGradientPaletteCount;
 
+extern const uint8_t GammaCorrection[256];
+
 #endif

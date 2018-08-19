@@ -129,9 +129,13 @@ void setup()
   patterns[kNumPatterns++] = new Pattern9();
 
   randomSeed(analogRead(0));
+  games[kNumGames++] = new Starfish();
   games[kNumGames++] = new SpinGame();
   games[kNumGames++] = new TextGame();
-  games[0]->start(context);
+
+  if (state == DiscGames) {
+    games[0]->start(context);
+  }
 
   context.curPalette = &gCurrentPalette;
 

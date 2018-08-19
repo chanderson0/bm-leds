@@ -19,7 +19,7 @@ void SpinGame::draw(CRGB *leds, LEDContext &context)
   bool inAnimation = context.elapsed - startTime < duration;
   if (!inAnimation)
   {
-    if (context.remoteDist < 30)
+    if (context.remoteDist < 30 && context.elapsed - context.remoteDistTime < 200)
     {
       if (isClose)
       {
@@ -132,18 +132,30 @@ void MemoryPanel::drawPixel(int16_t x, int16_t y, uint16_t color)
   screen[x][y] = color;
 }
 
-uint16_t MemoryPanel::sample(float x, float y)
+uint16_t MemoryPanel::sample(float x, float y, bool blur)
 {
   uint16_t ax = x * width();
-  uint16_t ay = y * width();
+  uint16_t ay = y * height();
 
-  uint16_t c0 = get(ax + 0, ay + 0);
-  uint16_t cl = get(ax - 1, ay + 0);
-  uint16_t cr = get(ax + 1, ay + 0);
-  uint16_t ct = get(ax + 0, ay + 1);
-  uint16_t cb = get(ax + 0, ay - 1);
+  if (blur)
+  {
+    uint16_t c0 = get(ax + 0, ay + 0);
+    uint16_t cl = get(ax - 1, ay + 0);
+    uint16_t cr = get(ax + 1, ay + 0);
+    uint16_t ct = get(ax + 0, ay + 1);
+    uint16_t cb = get(ax + 0, ay - 1);
 
-  return c0 * 0.5 + cl * 0.125 + cr * 0.125 + ct * 0.125 + cb * 0.125;
+    CRGB out;
+    out += convert565(c0).nscale8_video(87);
+    out += convert565(cl).nscale8_video(42);
+    out += convert565(cr).nscale8_video(42);
+    out += convert565(ct).nscale8_video(42);
+    out += convert565(cb).nscale8_video(42);
+
+    return convert888(out);
+  }
+
+  return get(ax, ay);
 }
 
 uint16_t MemoryPanel::get(uint16_t x, uint16_t y)
@@ -157,7 +169,7 @@ uint16_t MemoryPanel::get(uint16_t x, uint16_t y)
 
 void MemoryPanel::debug()
 {
-  char out[1024];
+  char out[128];
   for (int y = 0; y < height(); ++y)
   {
     int outChar = 0;
@@ -167,7 +179,6 @@ void MemoryPanel::debug()
     }
     out[outChar] = 0;
     Serial.println(out);
-    delay(20);
   }
 }
 
@@ -270,7 +281,7 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
   {
     unsigned long timeDelta = context.elapsed - closeEnoughStart;
 
-    if (context.remoteDist < 20)
+    if (context.remoteDist < 30 && context.elapsed - context.remoteDistTime < 200)
     {
       if (!isClose)
       {
@@ -328,5 +339,63 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
   {
     start(context);
     context.button1DownHandled = true;
+  }
+}
+
+Starfish::Starfish()
+{
+  panel = new MemoryPanel(32, 32);
+  palette = Coral_reef_gp;
+}
+
+void Starfish::start(LEDContext &context)
+{
+  startTime = context.elapsed;
+  smoothValue = 127;
+}
+
+void Starfish::draw(CRGB *leds, LEDContext &context)
+{
+  float dist = 0.5f;
+  if (context.elapsed - context.remoteDistTime < 200)
+  {
+    uint8_t realDist = map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255);
+    dist = 1.0 - (float)(realDist) / 255.0f;
+  }
+  smoothValue += (dist - smoothValue) * 0.2;
+
+  const uint16_t centerX = panel->width() / 2;
+  const uint16_t centerY = panel->height() / 2;
+
+  panel->fillScreen(0);
+
+  static const int numArms = 7;
+  for (int i = 0; i < numArms; ++i)
+  {
+    float angle1 = (float)i / numArms * M_PI * 2.0f + smoothValue * M_PI;
+
+    CRGB color2 = ColorFromPalette(palette, (float)context.elapsed * 0.1f + 15 + i * 255 / (numArms + 2));
+    const uint16_t color565_2 = convert888(color2);
+
+    int16_t x1 = centerX + cos(angle1) * panel->width() / 4;
+    int16_t y1 = centerY + sin(angle1) * panel->width() / 4;
+    panel->drawLine(centerX, centerY, x1, y1, color565_2);
+
+    CRGB color3 = ColorFromPalette(palette, (float)context.elapsed * 0.1f + 30 + i * 255 / (numArms + 2));
+    const uint16_t color565_3 = convert888(color3);
+
+    float angle2 = angle1 + (smoothValue * 1.5 + 0.5) * M_PI * 2.0;
+    int16_t x2 = x1 + cos(angle2) * panel->width() / 5;
+    int16_t y2 = y1 + sin(angle2) * panel->width() / 5;
+    panel->drawLine(x1, y1, x2, y2, color565_3);
+  }
+
+  for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+  {
+    float x = context.pixelCoordsf[i][0] + 0.5;
+    float y = context.pixelCoordsf[i][1] + 0.5;
+
+    uint16_t color = panel->sample(x, y, true);
+    leds[i] = convert565(color);
   }
 }
