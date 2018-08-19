@@ -344,7 +344,6 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
 
 Starfish::Starfish()
 {
-  panel = new MemoryPanel(32, 32);
   palette = Coral_reef_gp;
 }
 
@@ -356,6 +355,8 @@ void Starfish::start(LEDContext &context)
 
 void Starfish::draw(CRGB *leds, LEDContext &context)
 {
+  MemoryPanel *panel = context.sharedPanel;
+
   float dist = 0.5f;
   if (context.elapsed - context.remoteDistTime < 200)
   {

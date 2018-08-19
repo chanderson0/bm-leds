@@ -117,6 +117,9 @@ void setup()
     context.pixelCoordsf[i][1] = yNorm - 0.5;
   }
 
+  context.sharedPanel = new MemoryPanel(32, 32);
+  context.curPalette = &gCurrentPalette;
+
   patterns[kNumPatterns++] = new Pattern0();
   patterns[kNumPatterns++] = new Pattern1();
   patterns[kNumPatterns++] = new Pattern2();
@@ -132,12 +135,10 @@ void setup()
   games[kNumGames++] = new Starfish();
   games[kNumGames++] = new SpinGame();
   games[kNumGames++] = new TextGame();
-
-  if (state == DiscGames) {
+  if (state == DiscGames)
+  {
     games[0]->start(context);
   }
-
-  context.curPalette = &gCurrentPalette;
 
   Serial.println("Done init!");
 }

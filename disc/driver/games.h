@@ -94,7 +94,6 @@ public:
 
 private:
   float smoothValue;
-  MemoryPanel *panel;
   CRGBPalette16 palette;
 };
 
