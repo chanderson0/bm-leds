@@ -122,7 +122,6 @@ void setup()
   context.sharedPanel = new MemoryPanel(32, 32);
   context.curPalette = &gCurrentPalette;
 
-  patterns[kNumPatterns++] = new Pattern11();
   patterns[kNumPatterns++] = new Pattern0();
   patterns[kNumPatterns++] = new Pattern1();
   patterns[kNumPatterns++] = new Pattern2();
@@ -134,6 +133,7 @@ void setup()
   patterns[kNumPatterns++] = new Pattern8();
   patterns[kNumPatterns++] = new Pattern9();
   patterns[kNumPatterns++] = new Pattern10();
+  patterns[kNumPatterns++] = new Pattern11();
 
   randomSeed(analogRead(0));
   games[kNumGames++] = new Starfish();
