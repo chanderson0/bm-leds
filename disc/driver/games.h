@@ -2,8 +2,9 @@
 #define Games_h
 
 #include "FastLED.h"
+
 #include "types.h"
-#include "Adafruit_GFX.h"
+#include "memory_panel.h"
 
 class Game
 {
@@ -27,21 +28,21 @@ public:
   void draw(CRGB *leds, LEDContext &context) override;
 
 private:
-  float startAngle, curAngle, endAngle;
+  CRGBPalette16 palette;
+
+  float startAngle = 0, curAngle = 0, endAngle;
   uint16_t duration;
+
+  bool isClose = false;
+  uint32_t microsCloseEnough = 0;
+  unsigned long lastFrameTime = 0;
 };
 
-class MemoryPanel : public Adafruit_GFX
+enum EightBallState
 {
-public:
-  MemoryPanel(uint16_t width, uint16_t height);
-  virtual void drawPixel(int16_t x, int16_t y, uint16_t color) override;
-  uint16_t sample(float x, float y);
-  uint16_t get(uint16_t x, uint16_t y);
-  void debug();
-
-private:
-  uint16_t **screen;
+  EightBallBoot,
+  EightBallIdle,
+  EightBallText
 };
 
 class TextGame : public Game
@@ -52,8 +53,35 @@ public:
   void draw(CRGB *leds, LEDContext &context) override;
 
 private:
+  void setState(EightBallState newState, LEDContext &context);
+  void newPrediction(LEDContext &context);
+  void drawPanel(CRGB *leds, LEDContext &context);
+
+  EightBallState state;
+  unsigned long stateStartTime;
+
+  unsigned long closeEnoughStart;
+  bool isClose;
+
+  int prevX;
+  int loops;
+
   MemoryPanel *panel;
   String curString;
+
+  CRGBPalette16 palette;
+};
+
+class Starfish : public Game
+{
+public:
+  Starfish();
+  void start(LEDContext &context) override;
+  void draw(CRGB *leds, LEDContext &context) override;
+
+private:
+  float smoothValue;
+  CRGBPalette16 palette;
 };
 
 #endif

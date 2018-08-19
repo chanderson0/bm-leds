@@ -1,4 +1,6 @@
 #include "patterns.h"
+#include "memory_panel.h"
+#include "util.h"
 
 void Pattern0::draw(CRGB *leds, LEDContext &context)
 {
@@ -109,4 +111,58 @@ void Pattern9::draw(CRGB *leds, LEDContext &context)
     uint8_t v = sin8(x / 2 + context.elapsed / 30) + sin8(y / 2 - context.elapsed / 25) - context.elapsed / 20;
     leds[i] = ColorFromPalette(*context.curPalette, v);
   }
+}
+
+void Pattern10::draw(CRGB *leds, LEDContext &context)
+{
+  MemoryPanel *p = context.sharedPanel;
+  p->fillScreen(0);
+
+  for (int i = 0; i < 20; ++i)
+  {
+    CRGB color = ColorFromPalette(*context.curPalette, sin8(context.elapsed / 15 + i * 5));
+
+    float x = p->width() / 2.0;
+    float y = p->height() / 2.0;
+    float r = p->width() / (1.0 + i / 2.0);
+
+    float angle = (float)context.elapsed / 3000.0f * M_PI * 2.0 + (float)i / 20.0 * 1.5;
+    float x1 = x + cos(angle + M_PI * 0.0 / 3.0) * r;
+    float y1 = y + sin(angle + M_PI * 0.0 / 3.0) * r;
+    float x2 = x + cos(angle + M_PI * 2.0 / 3.0) * r;
+    float y2 = y + sin(angle + M_PI * 2.0 / 3.0) * r;
+    float x3 = x + cos(angle + M_PI * 4.0 / 3.0) * r;
+    float y3 = y + sin(angle + M_PI * 4.0 / 3.0) * r;
+
+    p->fillTriangle(x1, y1, x2, y2, x3, y3, convert888(color));
+  }
+
+  p->drawToScreen(leds, context, true);
+}
+
+void Pattern11::draw(CRGB *leds, LEDContext &context)
+{
+  MemoryPanel *p = context.sharedPanel;
+  p->fillScreen(0);
+
+  for (float t = 0; t < M_PI / 2.0; t += 0.02)
+  {
+    float rt = t + (float)context.elapsed / 500.0f;
+
+    CRGB color = ColorFromPalette(*context.curPalette, context.elapsed / 15 + t * (255.0 / M_PI * 2.0));
+
+    float x = sin(2.0 * rt + M_PI / 2.0 + (float)context.elapsed / 20000.0f);
+    float y = sin(3.0 * rt);
+
+    x *= 0.5 * 0.7;
+    y *= 0.5 * 0.7;
+    x += 0.5;
+    y += 0.5;
+    x *= p->width();
+    y *= p->height();
+
+    p->drawPixel(x, y, convert888(color));
+  }
+
+  p->drawToScreen(leds, context, true);
 }

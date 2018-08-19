@@ -38,12 +38,17 @@ const uint8_t ringIndexMap[NUM_RINGS][2] = {
     {0, 47},    //9 Outer Ring
 };
 
+// Forward declaration
+class MemoryPanel;
+
 typedef struct {
   unsigned long elapsed = 0;
   unsigned long curSceneStart = 0;
 
-  uint8_t pixelCoords[NUM_PIXELS][2];
-  uint8_t pixelCoordsPolar[NUM_PIXELS][2];
+  uint8_t pixelCoords[NUM_PIXELS][2]; // x, y => 0-255
+  uint8_t pixelCoordsPolar[NUM_PIXELS][2]; // r, theta => 0-255
+  float pixelCoordsf[NUM_PIXELS][2]; // x, y => -0.5->0.5
+  float pixelCoordsPolarf[NUM_PIXELS][2]; // r, theta => 0-0.5, 0-2pi
   CRGBPalette16 *curPalette;
 
   // Remote data
@@ -61,6 +66,8 @@ typedef struct {
   bool button2DownHandled = true;
   unsigned long button2UpTime = 0;
   bool button2UpHandled = true;
+
+  MemoryPanel *sharedPanel;
 } LEDContext;
 
 #endif
