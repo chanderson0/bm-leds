@@ -124,7 +124,7 @@ void setup()
 
   patterns[kNumPatterns++] = new Pattern0();
   patterns[kNumPatterns++] = new Pattern1();
-  patterns[kNumPatterns++] = new Pattern2();
+  // patterns[kNumPatterns++] = new Pattern2();
   patterns[kNumPatterns++] = new Pattern3();
   patterns[kNumPatterns++] = new Pattern4();
   patterns[kNumPatterns++] = new Pattern5();
