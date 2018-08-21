@@ -16,6 +16,8 @@
 - Dependencies
     - FastLED 3.0.7
     - RF24 1.3.1
+    - Adafruit_GFX
+        - Note: you may need to make the constructor for `GFXcanvas16` `public`, which it isn't in the default Teensyduino install.
 
 #### Remote
 
