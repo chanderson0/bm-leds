@@ -3,6 +3,9 @@
     "chrono": "cpp",
     "ios": "cpp",
     "__locale": "cpp",
-    "ratio": "cpp"
+    "ratio": "cpp",
+    "cmath": "cpp",
+    "cstdlib": "cpp",
+    "string": "cpp"
   }
 }
