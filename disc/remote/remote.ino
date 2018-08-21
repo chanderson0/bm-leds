@@ -95,7 +95,7 @@ void loop() {
     if (now - receiveTime < 2000) {
       ledsHigh = true;
     }
-    analogWrite(LED_PIN, ledsHigh ? 100 : 50);
+    analogWrite(LED_PIN, ledsHigh ? 5 : 10);
   }
 
   int dist = distSensor.readRangeContinuousMillimeters();
