@@ -1,5 +1,6 @@
+#define MATH_3D_IMPLEMENTATION
+
 #include "games.h"
-#include "util.h"
 #include "palettes.h"
 
 #include <Fonts/FreeSansOblique12pt7b.h>
@@ -333,4 +334,81 @@ void Starfish::draw(CRGB *leds, LEDContext &context)
   }
 
   panel->drawToScreen(leds, context, true);
+}
+
+RingGame::RingGame()
+{
+}
+
+void RingGame::start(LEDContext &context)
+{
+  startTime = context.elapsed;
+  state = RingGamePlaying;
+
+  score = 0;
+  playerAngle = 0;
+  ball = vec3(0, 0, 0);
+  float angle = randFloat() * M_PI * 2.0;
+  const float speed = 0.001;
+  ballVel = vec3(cos(angle) * speed, sin(angle) * speed, 0);
+}
+
+void RingGame::draw(CRGB *leds, LEDContext &context)
+{
+  static bool isClose = false;
+  static unsigned long microsCloseEnough = 0;
+  static unsigned long lastFrameTime = micros();
+
+  unsigned long nowMicros = micros();
+  float delta = nowMicros - lastFrameTime;
+  lastFrameTime = micros();
+
+  MemoryPanel *p = context.sharedPanel;
+
+  if (state == RingGamePlaying)
+  {
+    playerAngle = float(context.remoteDist) / 255 * M_PI * 2.0 * 2.0;
+
+    const int difficulty = (context.elapsed - startTime) / 10000;
+    float speedModifier = float(difficulty) * 0.2 + 1.0;
+    ball = v3_add(ball, v3_muls(ballVel, speedModifier));
+
+    float ballAngle = atan2(ball.y, ball.x);
+    const float playerBallDiff = abs(angleDiff(ballAngle, playerAngle));
+
+    const float dist = v3_length(ball);
+    if (dist > 0.5)
+    {
+      if (playerBallDiff < M_PI * 0.3)
+      {
+        vec3_t norm = v3_norm(v3_muls(ball, -1));
+        norm = m4_mul_dir(m4_rotation_z(randFloat() * 0.1 - 0.05), norm);
+        norm = v3_norm(norm);
+
+        vec3_t refl = v3_sub(ballVel, v3_muls(norm, 2.0f * v3_dot(ballVel, norm)));
+        ballVel = refl;
+        score++;
+      }
+      else
+      {
+        return start(context);
+      }
+    }
+
+    p->fillScreen(0);
+    p->fillCircle((ball.x + 0.5) * p->width(), (ball.y + 0.5) * p->height(), p->width() / 15, convert888(CHSV(score * 50, qadd8(50, qmul8(difficulty, 75)), 255)));
+    p->drawToScreen(leds, context, false);
+
+    for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+    {
+      const uint8_t r = context.pixelCoordsPolar[i][0];
+      const float t = context.pixelCoordsPolarf[i][1];
+      const float diff = abs(angleDiff(t, playerAngle));
+
+      if (r > 225 && diff < M_PI * 0.25)
+      {
+        leds[i] = CRGB::White;
+      }
+    }
+  }
 }

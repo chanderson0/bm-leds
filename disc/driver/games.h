@@ -5,6 +5,8 @@
 
 #include "types.h"
 #include "memory_panel.h"
+#include "util.h"
+#include "math3d.h"
 
 class Game
 {
@@ -82,6 +84,21 @@ public:
 private:
   float smoothValue;
   CRGBPalette16 palette;
+};
+
+class RingGame : public Game
+{
+public:
+  RingGame();
+  void start(LEDContext &context) override;
+  void draw(CRGB *leds, LEDContext &context) override;
+
+private:
+  vec3_t ball, ballVel;
+  float playerAngle;
+  int score;
+
+  unsigned long stateStartTime;
 };
 
 #endif

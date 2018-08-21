@@ -138,8 +138,9 @@ void setup()
   patterns[kNumPatterns++] = new Pattern11();
 
   randomSeed(micros() + analogRead(1) + micros() + analogRead(2) + micros());
-  games[kNumGames++] = new TextGame();
   games[kNumGames++] = new SpinGame();
+  games[kNumGames++] = new RingGame();
+  games[kNumGames++] = new TextGame();
   games[kNumGames++] = new Starfish();
   if (state == DiscGames)
   {
