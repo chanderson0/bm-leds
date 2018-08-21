@@ -6,6 +6,15 @@
     "ratio": "cpp",
     "cmath": "cpp",
     "cstdlib": "cpp",
-    "string": "cpp"
+    "string": "cpp",
+    "limits": "cpp",
+    "algorithm": "cpp",
+    "__functional_base": "cpp",
+    "array": "cpp",
+    "istream": "cpp",
+    "locale": "cpp",
+    "memory": "cpp",
+    "tuple": "cpp",
+    "utility": "cpp"
   }
 }

@@ -1,24 +1,6 @@
 #include "memory_panel.h"
 #include "util.h"
 
-MemoryPanel::MemoryPanel(uint16_t width, uint16_t height) : Adafruit_GFX(width, height)
-{
-  screen = (uint16_t **)malloc(sizeof(uint16_t *) * width);
-  for (uint16_t x = 0; x < width; ++x)
-  {
-    screen[x] = (uint16_t *)malloc(sizeof(uint16_t) * height);
-  }
-}
-
-void MemoryPanel::drawPixel(int16_t x, int16_t y, uint16_t color)
-{
-  if (x < 0 || x >= width())
-    return;
-  if (y < 0 || y >= height())
-    return;
-  screen[x][y] = color;
-}
-
 uint16_t MemoryPanel::sample(float x, float y, bool blur)
 {
   uint16_t ax = x * width();
@@ -51,7 +33,9 @@ uint16_t MemoryPanel::get(uint16_t x, uint16_t y)
     return 0;
   if (y < 0 || y >= height())
     return 0;
-  return screen[x][y];
+
+  const uint16_t *buf = getBuffer();
+  return buf[x + y * WIDTH];
 }
 
 void MemoryPanel::drawToScreen(CRGB *leds, LEDContext &context, bool blur)
@@ -74,7 +58,7 @@ void MemoryPanel::debug()
     int outChar = 0;
     for (int x = 0; x < width(); ++x)
     {
-      out[outChar++] = screen[x][y] > 0 ? '1' : '0';
+      out[outChar++] = get(x, y) > 0 ? '1' : '0';
     }
     out[outChar] = 0;
     Serial.println(out);

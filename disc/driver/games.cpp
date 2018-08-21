@@ -145,8 +145,9 @@ const String magic8Ball[] = {
 TextGame::TextGame()
 {
   panel = new MemoryPanel(30, 30);
-  panel->setFont(&FreeSansOblique12pt7b);
+  panel->setRotation(1);
 
+  panel->setFont(&FreeSansOblique12pt7b);
   panel->setTextWrap(false);
   panel->setCursor(0, 0);
   panel->setTextColor(0xffff);
@@ -164,6 +165,7 @@ void TextGame::start(LEDContext &context)
 void TextGame::newPrediction(LEDContext &context)
 {
   curString = magic8Ball[random(0, sizeof(magic8Ball) / sizeof(String))];
+  closeEnoughStart = 0;
   setState(EightBallText, context);
 }
 
@@ -194,16 +196,16 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
   if (state == EightBallBoot)
   {
     panel->fillScreen(0);
-    panel->setCursor(5, 20);
+    panel->setCursor(7, 22);
     panel->println("8");
     panel->drawToScreen(leds, context, true);
 
     if (context.elapsed - stateStartTime > 1000)
     {
-      fade_video(leds, NUM_PIXELS, map(context.elapsed - stateStartTime, 1000, 5000, 0, 255));
+      fade_video(leds, NUM_PIXELS, map(context.elapsed - stateStartTime, 1000, 2000, 0, 255));
     }
 
-    if (context.elapsed - stateStartTime > 5000)
+    if (context.elapsed - stateStartTime > 2000)
     {
       isClose = false;
       setState(EightBallIdle, context);
@@ -223,7 +225,7 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
     }
     else
     {
-      closeEnoughStart += timeDelta * 0.01;
+      closeEnoughStart = 0;
       isClose = false;
     }
 
@@ -233,12 +235,19 @@ void TextGame::draw(CRGB *leds, LEDContext &context)
       newPrediction(context);
     }
 
+    if (!isClose)
+    {
+      timeDelta = 0;
+    }
+
+    uint8_t m = map(timeDelta, 0, 4000, 0, 255);
     for (uint8_t i = 0; i < NUM_PIXELS; ++i)
     {
       uint8_t r = context.pixelCoordsPolar[i][0];
+      uint8_t t = context.pixelCoordsPolar[i][1];
 
-      uint8_t v = map(timeDelta, 0, 4000, 0, 255);
-      uint8_t v2 = sin8(r * 2 + context.elapsed / 5);
+      uint8_t v = scale8(m, t - context.elapsed / 3);
+      uint8_t v2 = sin8(r * 2 + context.elapsed / 5) / 2;
 
       leds[i] = CHSV(max(v, v2), 100, max(v, v2));
     }

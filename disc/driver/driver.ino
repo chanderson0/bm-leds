@@ -16,6 +16,8 @@ CRGB prevLeds[NUM_PIXELS];
 const uint64_t kDiscAddr = 0xF0F0F0F0E1LL;
 const uint64_t kRemoteAddr = 0xF0F0F0F0D2LL;
 
+const int kSwitchModeTime = 3000;
+
 RF24 radio(9, 10);
 bool role = 0;
 #define MESSAGE_LENGTH 3
@@ -135,10 +137,10 @@ void setup()
   patterns[kNumPatterns++] = new Pattern10();
   patterns[kNumPatterns++] = new Pattern11();
 
-  randomSeed(analogRead(0));
-  games[kNumGames++] = new Starfish();
-  games[kNumGames++] = new SpinGame();
+  randomSeed(micros() + analogRead(1) + micros() + analogRead(2) + micros());
   games[kNumGames++] = new TextGame();
+  games[kNumGames++] = new SpinGame();
+  games[kNumGames++] = new Starfish();
   if (state == DiscGames)
   {
     games[0]->start(context);
@@ -224,6 +226,8 @@ void advanceGame()
 {
   curGame = addmod8(curGame, 1, kNumGames);
   games[curGame]->start(context);
+
+  context.curSceneStart = now;
 
   Serial.print("Advancing game to: ");
   Serial.println(curGame);
@@ -315,27 +319,37 @@ void drawPatterns()
 
     nblend(leds, prevLeds, NUM_PIXELS, 255 - patternAmt);
   }
+
+  if (now - rotateChangedTime < 500)
+  {
+    for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+    {
+      uint8_t r = context.pixelCoordsPolar[i][0];
+      uint8_t t = context.pixelCoordsPolar[i][1];
+
+      if (r < 50)
+      {
+        if (rotatingPattern)
+        {
+          leds[i] = CRGB::Purple;
+        }
+        else
+        {
+          leds[i] = CRGB::Black;
+        }
+      }
+    }
+  }
 }
 
 void drawGames()
 {
-  if (now - context.button1DownTime > 100 && !context.button1DownHandled)
+  const unsigned long latest = max(context.button1DownTime, context.button2DownTime);
+  if (context.button1State && context.button2State && now - context.button1DownTime > 100 && now - context.button2DownTime > 100 && context.curSceneStart < latest)
   {
-    if (!context.button2DownHandled)
-    {
-      context.button1DownHandled = true;
-      context.button2DownHandled = true;
-      advanceGame();
-    }
-  }
-  if (now - context.button2DownTime > 100 && !context.button2DownHandled)
-  {
-    if (!context.button1DownHandled && context.button1State)
-    {
-      context.button1DownHandled = true;
-      context.button2DownHandled = true;
-      advanceGame();
-    }
+    context.button1DownHandled = true;
+    context.button2DownHandled = true;
+    advanceGame();
   }
 
   games[curGame]->draw(leds, context);
@@ -343,9 +357,11 @@ void drawGames()
 
 void handleMetaButtons()
 {
-  if (context.button1State && context.button2State && now - context.button1DownTime > 3000 && now - context.button2DownTime > 3000)
+  if (context.button1State && context.button2State && now - context.button1DownTime > kSwitchModeTime && now - context.button2DownTime > kSwitchModeTime)
   {
     advanceState();
+    context.button1DownHandled = true;
+    context.button2DownHandled = true;
     context.button1DownTime = now;
     context.button2DownTime = now;
   }
@@ -353,22 +369,27 @@ void handleMetaButtons()
 
 void drawMeta()
 {
-  // TODO: fix
-  // if (now > 1500 && now - rotateChangedTime < 1500)
-  // {
-  //   int diff = now - rotateChangedTime;
-  //   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
-  //   {
-  //     uint8_t r = context.pixelCoordsPolar[i][0];
-  //     // uint8_t t = context.pixelCoordsPolar[i][1];
+  if (context.button1State && context.button2State)
+  {
+    const int dur = now - max(context.button1DownTime, context.button2DownTime);
+    Serial.println(dur);
+    if (dur > kSwitchModeTime / 4)
+    {
+      uint8_t max = float(dur - kSwitchModeTime / 4) / (kSwitchModeTime * 3 / 4) * 255;
+      for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+      {
+        uint8_t r = context.pixelCoordsPolar[i][0];
+        uint8_t t = context.pixelCoordsPolar[i][1];
 
-  //     if (r > 200)
-  //     {
-  //       CRGB blendColor = CHSV(0, 0, rotatingPattern ? 255 : 0);
-  //       leds[i] = blend(leds[i], blendColor, map(diff, 0, 1500, 0, r));
-  //     }
-  //   }
-  // }
+        if (r < 225 || t > max)
+        {
+          continue;
+        }
+
+        leds[i] = blend(leds[i], CRGB::White, GammaCorrection[max]);
+      }
+    }
+  }
 }
 
 void loop()
