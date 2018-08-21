@@ -42,8 +42,8 @@ void MemoryPanel::drawToScreen(CRGB *leds, LEDContext &context, bool blur)
 {
   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
   {
-    float x = context.pixelCoordsf[i][0] + 0.5;
-    float y = context.pixelCoordsf[i][1] + 0.5;
+    float x = context.pixelCoordsf[i][0];
+    float y = context.pixelCoordsf[i][1];
 
     uint16_t color = sample(x, y, blur);
     leds[i] = convert565(color);

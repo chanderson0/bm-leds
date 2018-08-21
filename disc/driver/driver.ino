@@ -117,8 +117,8 @@ void setup()
 
     context.pixelCoords[i][0] = 255 * xNorm;
     context.pixelCoords[i][1] = 255 * yNorm;
-    context.pixelCoordsf[i][0] = xNorm - 0.5;
-    context.pixelCoordsf[i][1] = yNorm - 0.5;
+    context.pixelCoordsf[i][0] = xNorm;
+    context.pixelCoordsf[i][1] = yNorm;
   }
 
   context.sharedPanel = new MemoryPanel(32, 32);
