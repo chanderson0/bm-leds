@@ -255,7 +255,7 @@ unsigned long upsideDownReadingTime = 0;
 
 void addStep()
 {
-    if (now - stepTime < 250)
+    if (now - stepTime < 500)
     {
         return;
     }
@@ -320,10 +320,6 @@ void loop()
         calibrating = false;
         setState(ShoeDefault);
         Serial.println("Finished calibrating!");
-    }
-    if (state == ShoeStep && now - stepTime > STEP_TIME_MILLIS)
-    {
-        setState(ShoeDefault);
     }
 
     accelerometer.isAllDataAvailable(isAllDataAvailable);
@@ -397,10 +393,12 @@ void loop()
         nblendPaletteTowardPalette(curPalette, targetPalette, 64);
     }
 
+    bool anySteps = false;
     for (size_t i = 0; i < NUM_STEP_TIMES; ++i)
     {
         if (i < stepCount && now - stepTimes[i] < STEP_TIME_MILLIS)
         {
+            anySteps = true;
             trueStepFracs[i] = float(now - stepTimes[i]) / STEP_TIME_MILLIS * 255;
             stepFracs[i] = 1.5 - (float(now - stepTimes[i]) / STEP_TIME_MILLIS * 2.25);
         }
@@ -434,21 +432,24 @@ void loop()
             leds[i] = ColorFromPalette(curPalette, v, sin8(angle + now / 2));
         }
 
-        float minHeightDiff = 1.0;
-        for (size_t i = 0; i < NUM_STEP_TIMES; ++i)
+        if (anySteps && radius < 10)
         {
-            if (stepFracs[i] < 0)
-                continue;
-            float heightDiff = abs(heightFrac - stepFracs[i]);
-            if (heightDiff < minHeightDiff)
+            float minHeightDiff = 1.0;
+            for (size_t i = 0; i < NUM_STEP_TIMES; ++i)
             {
-                minHeightDiff = heightDiff;
+                if (stepFracs[i] < 0)
+                    continue;
+                float heightDiff = abs(heightFrac - stepFracs[i]);
+                if (heightDiff < minHeightDiff)
+                {
+                    minHeightDiff = heightDiff;
+                }
             }
-        }
 
-        if (minHeightDiff < 0.125)
-        {
-            leds[i] = -leds[i]; //blend(leds[i], CHSV(0, 0, 255), cos8(minHeightDiff * 16));
+            if (minHeightDiff < 0.2)
+            {
+                leds[i] = blend(leds[i], CHSV(0, 0, 255), (1.0 - (minHeightDiff / 0.2)) * 255);
+            }
         }
     }
 
@@ -890,7 +891,6 @@ const TProgmemRGBGradientPalettePtr gGradientPalettes[] = {
     goddess_moon_gp,
     vilani_20_gp,
     white_gp,
-
 };
 
 // Count of how many gradients are defined:
