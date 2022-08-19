@@ -3,18 +3,19 @@
 
 #include "FastLED.h"
 
+#include "patterns.h"
 #include "types.h"
-#include "memory_panel.h"
+#include "led_panel.h"
 #include "util.h"
 #include "math3d.h"
 
-class Game
+class Scene
 {
 public:
-  Game(){};
+  Scene(){};
   virtual void start(LEDContext &context)
   {
-    startTime = context.elapsed;
+    startTime = context.now;
   };
   virtual void draw(CRGB *leds, LEDContext &context){};
 
@@ -22,15 +23,47 @@ protected:
   unsigned long startTime;
 };
 
-class SpinGame : public Game
+class PatternScene : public Scene
 {
 public:
-  SpinGame(){};
+  PatternScene(const int maxPatterns, const TProgmemRGBGradientPalettePtr palettes[], const int numPalettes);
+  void addPattern(Pattern *pattern);
+
   void start(LEDContext &context) override;
   void draw(CRGB *leds, LEDContext &context) override;
 
+  void advancePattern(LEDContext &context);
+  void advancePalette(LEDContext &context);
+
+private:
+  CRGB prevLeds[NUM_PIXELS];
+
+  Pattern **patterns;
+  int numPatterns = 0;
+  uint8_t curPattern = 0;
+  uint8_t prevPattern = 0;
+  uint8_t patternAmt = 255;
+
+  const TProgmemRGBGradientPalettePtr *palettes;
+  int numPalettes = 0;
+  uint8_t curPaletteIdx = 0;
+  CRGBPalette16 curPalette;
+  CRGBPalette16 targetPalette;
+};
+
+class SpinGameScene : public Scene
+{
+public:
+  SpinGameScene(){};
+  void start(LEDContext &context) override;
+  void draw(CRGB *leds, LEDContext &context) override;
+
+  void startSpin(LEDContext &context);
+
 private:
   CRGBPalette16 palette;
+
+  bool started = false;
 
   float startAngle = 0, curAngle = 0, endAngle;
   uint16_t duration;
@@ -47,10 +80,10 @@ enum EightBallState
   EightBallText
 };
 
-class EightballGame : public Game
+class EightballScene : public Scene
 {
 public:
-  EightballGame();
+  EightballScene();
   void start(LEDContext &context) override;
   void draw(CRGB *leds, LEDContext &context) override;
 
@@ -68,16 +101,16 @@ private:
   int prevX;
   int loops;
 
-  MemoryPanel *panel;
+  LEDPanel *panel;
   String curString;
 
   CRGBPalette16 palette;
 };
 
-class Starfish : public Game
+class StarfishScene : public Scene
 {
 public:
-  Starfish();
+  StarfishScene();
   void start(LEDContext &context) override;
   void draw(CRGB *leds, LEDContext &context) override;
 
@@ -86,10 +119,10 @@ private:
   CRGBPalette16 palette;
 };
 
-class RingGame : public Game
+class RingGameScene : public Scene
 {
 public:
-  RingGame();
+  RingGameScene();
   void start(LEDContext &context) override;
   void draw(CRGB *leds, LEDContext &context) override;
 

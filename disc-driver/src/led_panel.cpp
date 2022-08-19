@@ -1,7 +1,7 @@
-#include "memory_panel.h"
+#include "led_panel.h"
 #include "util.h"
 
-uint16_t MemoryPanel::sample(float x, float y, bool blur)
+uint16_t LEDPanel::sample(float x, float y, bool blur)
 {
   uint16_t ax = x * width();
   uint16_t ay = y * height();
@@ -27,7 +27,7 @@ uint16_t MemoryPanel::sample(float x, float y, bool blur)
   return get(ax, ay);
 }
 
-uint16_t MemoryPanel::get(uint16_t x, uint16_t y)
+uint16_t LEDPanel::get(uint16_t x, uint16_t y)
 {
   if (x < 0 || x >= width())
     return 0;
@@ -38,7 +38,7 @@ uint16_t MemoryPanel::get(uint16_t x, uint16_t y)
   return buf[x + y * WIDTH];
 }
 
-void MemoryPanel::drawToScreen(CRGB *leds, LEDContext &context, bool blur)
+void LEDPanel::drawToScreen(CRGB *leds, LEDContext &context, bool blur)
 {
   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
   {
@@ -50,7 +50,7 @@ void MemoryPanel::drawToScreen(CRGB *leds, LEDContext &context, bool blur)
   }
 }
 
-void MemoryPanel::debug()
+void LEDPanel::debug()
 {
   char out[128];
   for (int y = 0; y < height(); ++y)

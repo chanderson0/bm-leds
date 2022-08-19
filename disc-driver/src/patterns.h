@@ -4,18 +4,18 @@
 #include "FastLED.h"
 #include "types.h"
 
-#define PATTERN_CLASS_N(n)                               \
-  class Pattern##n : public Pattern                      \
-  {                                                      \
-  public:                                                \
-    void draw(CRGB *leds, LEDContext &context) override; \
+#define PATTERN_CLASS_N(n)                                                       \
+  class Pattern##n : public Pattern                                              \
+  {                                                                              \
+  public:                                                                        \
+    void draw(CRGB *leds, LEDContext &context, CRGBPalette16 *palette) override; \
   };
 
 class Pattern
 {
 public:
   Pattern(){};
-  virtual void draw(CRGB *leds, LEDContext &context) { Serial.println(context.elapsed); };
+  virtual void draw(CRGB *leds, LEDContext &context, CRGBPalette16 *palette) { Serial.println(context.now); };
 };
 
 PATTERN_CLASS_N(0)

@@ -1,53 +1,128 @@
 #define MATH_3D_IMPLEMENTATION
 
-#include "games.h"
+#include "scenes.h"
 #include "palettes.h"
+#include "patterns.h"
 
 #include <Fonts/FreeSansOblique12pt7b.h>
 
-void SpinGame::start(LEDContext &context)
+PatternScene::PatternScene(const int maxPatterns, const TProgmemRGBGradientPalettePtr palettes[], const int numPalettes)
 {
-  startTime = context.elapsed;
-  startAngle = curAngle;
-  endAngle = ((float)random(0, 10000) / 10000.0 + random(5, 7)) * M_PI * 2.0f;
-  duration = random(6000, 8000);
+  patterns = (Pattern **)malloc(sizeof(Pattern *) * maxPatterns);
+  numPatterns = 0;
 
-  palette = rainbow_gp;
+  this->palettes = palettes;
+  this->numPalettes = numPalettes;
 }
 
-void SpinGame::draw(CRGB *leds, LEDContext &context)
+void PatternScene::addPattern(Pattern *pattern)
 {
-  bool inAnimation = context.elapsed - startTime < duration;
+  patterns[numPatterns++] = pattern;
+}
+
+void PatternScene::start(LEDContext &context)
+{
+  curPalette = (CRGBPalette16)palettes[0];
+  targetPalette = (CRGBPalette16)palettes[0];
+
+  curPaletteIdx = 0;
+  curPattern = 0;
+  patternAmt = 0;
+}
+
+void PatternScene::advancePattern(LEDContext &context)
+{
+  prevPattern = curPattern;
+  curPattern = addmod8(curPattern, 1, numPatterns);
+  patternAmt = 0;
+
+  context.sceneStart = context.now;
+
+  Serial.print("Advancing pattern from ");
+  Serial.print(prevPattern);
+  Serial.print(" to ");
+  Serial.println(curPattern);
+}
+
+void PatternScene::advancePalette(LEDContext &context)
+{
+  curPaletteIdx = addmod8(curPaletteIdx, 1, numPalettes);
+  targetPalette = (CRGBPalette16)palettes[curPaletteIdx];
+
+  Serial.print("Advancing palette to: ");
+  Serial.println(curPaletteIdx);
+}
+
+void PatternScene::draw(CRGB *leds, LEDContext &context)
+{
+  EVERY_N_SECONDS(SCENE_TIME)
+  {
+    advancePattern(context);
+  }
+
+  EVERY_N_SECONDS(PALETTE_TIME)
+  {
+    advancePalette(context);
+  }
+
+  EVERY_N_MILLISECONDS(PALETTE_BLEND_TIME_MS)
+  {
+    nblendPaletteTowardPalette(curPalette, targetPalette, 64);
+  }
+
+  patterns[curPattern]->draw(leds, context, &curPalette);
+
+  if (patternAmt != 255)
+  {
+    patterns[prevPattern]->draw(prevLeds, context, &curPalette);
+
+    EVERY_N_MILLISECONDS(10)
+    {
+      patternAmt = qadd8(patternAmt, 8);
+    }
+
+    nblend(leds, prevLeds, NUM_PIXELS, 255 - patternAmt);
+  }
+}
+
+void SpinGameScene::start(LEDContext &context)
+{
+  started = false;
+}
+
+void SpinGameScene::startSpin(LEDContext &context)
+{
+  started = true;
+
+  startTime = context.now;
+  startAngle = curAngle;
+  endAngle = ((float)random(0, 10000) / 10000.0 + random(5, 7)) * M_PI * 2.0f;
+  duration = random(4000, 10000);
+}
+
+void SpinGameScene::draw(CRGB *leds, LEDContext &context)
+{
+  bool inAnimation = started && context.now - startTime < duration;
   if (!inAnimation)
   {
-    if (context.remoteDist < 30 && context.elapsed - context.remoteDistTime < 200)
+    if (!context.buttonDownHandled)
     {
-      if (isClose)
-      {
-        microsCloseEnough += micros() - lastFrameTime;
-      }
-      if (microsCloseEnough > 2 * 1000 * 1000)
-      {
-        microsCloseEnough = 0;
-        return start(context);
-      }
-      isClose = true;
-    }
-    else
-    {
-      isClose = false;
-      microsCloseEnough = 0;
+      context.buttonDownHandled = true;
+      startSpin(context);
     }
   }
-  lastFrameTime = micros();
 
-  if (context.elapsed - context.button1DownTime > 200 && !context.button1DownHandled)
+  if (!started)
   {
-    start(context);
-    context.button1DownHandled = true;
+    context.panel->fillScreen(0);
+    context.panel->setCursor(10, 13);
+    context.panel->setTextColor(0xF800);
+    context.panel->println("->");
+    context.panel->drawToScreen(leds, context, true);
+    return;
   }
 
-  float a = easeInOutQuad(constrain(context.elapsed - startTime, 0, duration), startAngle, endAngle, duration);
+  float a = easeInOutQuad(constrain(context.now - startTime, 0, duration), startAngle, endAngle, duration);
   curAngle = fmod(a, M_PI * 2.0f);
 
   uint8_t thresh = float((microsCloseEnough * 100) / (2 * 1000 * 1000)) / 100.f * 255;
@@ -111,20 +186,15 @@ void SpinGame::draw(CRGB *leds, LEDContext &context)
       }
     }
 
-    leds[i] = ColorFromPalette(palette, t, b);
+    leds[i] = CHSV(0, 255, b);
+    // ColorFromPalette(palette, t, b);
   }
 }
-
-// const String stringChoices[] = {
-//     "Burning Man",
-//     "Galapagos",
-//     "Not today",
-// };
 
 const String magic8Ball[] = {
     "Signs point to yes.",
     "Yes.",
-    "Reply hazy, try again.",
+    // "Reply hazy, try again.",
     "Without a doubt.",
     "My sources say no.",
     "As I see it, yes.",
@@ -132,20 +202,20 @@ const String magic8Ball[] = {
     "Concentrate and ask again.",
     "Outlook not so good.",
     "It is decidedly so.",
-    "Better not tell you now.",
+    // "Better not tell you now.",
     "Very doubtful.",
     "Yes - definitely.",
     "It is certain.",
     "Cannot predict now.",
     "Most likely.",
-    "Ask again later.",
+    // "Ask again later.",
     "My reply is no.",
     "Outlook good.",
     "Don't count on it."};
 
-EightballGame::EightballGame()
+EightballScene::EightballScene()
 {
-  panel = new MemoryPanel(30, 30);
+  panel = new LEDPanel(30, 30);
   panel->setRotation(1);
 
   panel->setFont(&FreeSansOblique12pt7b);
@@ -155,31 +225,31 @@ EightballGame::EightballGame()
   panel->setTextSize(1);
 }
 
-void EightballGame::start(LEDContext &context)
+void EightballScene::start(LEDContext &context)
 {
-  startTime = context.elapsed;
+  startTime = context.now;
   setState(EightBallBoot, context);
   prevX = 0;
   loops = 0;
 }
 
-void EightballGame::newPrediction(LEDContext &context)
+void EightballScene::newPrediction(LEDContext &context)
 {
   curString = magic8Ball[random(0, sizeof(magic8Ball) / sizeof(String))];
-  closeEnoughStart = 0;
+  // closeEnoughStart = 0;
   setState(EightBallText, context);
 }
 
-void EightballGame::setState(EightBallState newState, LEDContext &context)
+void EightballScene::setState(EightBallState newState, LEDContext &context)
 {
   Serial.print("Eightball state: ");
   Serial.println(newState);
 
   state = newState;
-  stateStartTime = context.elapsed;
+  stateStartTime = context.now;
 }
 
-void EightballGame::drawPanel(CRGB *leds, LEDContext &context)
+void EightballScene::drawPanel(CRGB *leds, LEDContext &context)
 {
   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
   {
@@ -192,66 +262,40 @@ void EightballGame::drawPanel(CRGB *leds, LEDContext &context)
   }
 }
 
-void EightballGame::draw(CRGB *leds, LEDContext &context)
+void EightballScene::draw(CRGB *leds, LEDContext &context)
 {
   if (state == EightBallBoot)
   {
     panel->fillScreen(0);
     panel->setCursor(7, 22);
+    context.panel->setTextColor(0xFFFF);
     panel->println("8");
     panel->drawToScreen(leds, context, true);
 
-    if (context.elapsed - stateStartTime > 1000)
+    if (context.now - stateStartTime > 500)
     {
-      fade_video(leds, NUM_PIXELS, map(context.elapsed - stateStartTime, 1000, 2000, 0, 255));
+      fade_video(leds, NUM_PIXELS, map(context.now - stateStartTime, 1000, 2000, 0, 255));
     }
 
-    if (context.elapsed - stateStartTime > 2000)
+    if (context.now - stateStartTime > 750)
     {
-      isClose = false;
       setState(EightBallIdle, context);
     }
   }
   else if (state == EightBallIdle)
   {
-    unsigned long timeDelta = context.elapsed - closeEnoughStart;
-
-    if (context.remoteDist < 30 && context.elapsed - context.remoteDistTime < 200)
+    if (!context.buttonDownHandled)
     {
-      if (!isClose)
-      {
-        closeEnoughStart = context.elapsed;
-      }
-      isClose = true;
-    }
-    else
-    {
-      closeEnoughStart = 0;
-      isClose = false;
-    }
-
-    timeDelta = context.elapsed - closeEnoughStart;
-    if (isClose && timeDelta > 4000)
-    {
+      loops = 0;
       newPrediction(context);
+      context.buttonDownHandled = true;
     }
 
-    if (!isClose)
-    {
-      timeDelta = 0;
-    }
-
-    uint8_t m = map(timeDelta, 0, 4000, 0, 255);
-    for (uint8_t i = 0; i < NUM_PIXELS; ++i)
-    {
-      uint8_t r = context.pixelCoordsPolar[i][0];
-      uint8_t t = context.pixelCoordsPolar[i][1];
-
-      uint8_t v = scale8(m, t - context.elapsed / 3);
-      uint8_t v2 = sin8(r * 2 + context.elapsed / 5) / 2;
-
-      leds[i] = CHSV(max(v, v2), 100, max(v, v2));
-    }
+    panel->fillScreen(0);
+    panel->setCursor(7, 22);
+    panel->setTextColor(0xFFFF);
+    panel->println("?");
+    panel->drawToScreen(leds, context, true);
   }
   else if (state == EightBallText)
   {
@@ -259,52 +303,42 @@ void EightballGame::draw(CRGB *leds, LEDContext &context)
     uint16_t tw, th;
     panel->getTextBounds((char *)(curString.c_str()), 0, 0, &tx, &ty, &tw, &th);
 
-    int16_t x = (panel->width() + 50) - (((context.elapsed - stateStartTime) / 25) % (tw + panel->width() + 100));
-    if (x > prevX)
+    int16_t x = (panel->width() + 50) - (((context.now - stateStartTime) / 25) % (tw + panel->width() + 100));
+    if (++loops >= 2 && x > prevX)
     {
-      if (++loops >= 2)
-      {
-        isClose = false;
-        setState(EightBallIdle, context);
-      }
+      setState(EightBallIdle, context);
     }
     prevX = x;
 
     panel->fillScreen(0);
     panel->setCursor(x, 20);
+    panel->setTextColor(0xFFFF);
     panel->println(curString.c_str());
-
     panel->drawToScreen(leds, context, true);
-  }
-
-  if (context.elapsed - context.button1DownTime > 200 && !context.button1DownHandled)
-  {
-    start(context);
-    context.button1DownHandled = true;
   }
 }
 
-Starfish::Starfish()
+StarfishScene::StarfishScene()
 {
   palette = Coral_reef_gp;
 }
 
-void Starfish::start(LEDContext &context)
+void StarfishScene::start(LEDContext &context)
 {
-  startTime = context.elapsed;
+  startTime = context.now;
   smoothValue = 127;
 }
 
-void Starfish::draw(CRGB *leds, LEDContext &context)
+void StarfishScene::draw(CRGB *leds, LEDContext &context)
 {
-  MemoryPanel *panel = context.sharedPanel;
+  LEDPanel *panel = context.panel;
 
   float dist = 0.5f;
-  if (context.elapsed - context.remoteDistTime < 200)
-  {
-    uint8_t realDist = map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255);
-    dist = 1.0 - (float)(realDist) / 255.0f;
-  }
+  // if (context.elapsed - context.remoteDistTime < 200)
+  // {
+  //   uint8_t realDist = map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255);
+  //   dist = 1.0 - (float)(realDist) / 255.0f;
+  // }
   smoothValue += (dist - smoothValue) * 0.2;
 
   const uint16_t centerX = panel->width() / 2;
@@ -317,14 +351,14 @@ void Starfish::draw(CRGB *leds, LEDContext &context)
   {
     float angle1 = (float)i / numArms * M_PI * 2.0f + smoothValue * M_PI;
 
-    CRGB color2 = ColorFromPalette(palette, (float)context.elapsed * 0.1f + 15 + i * 255 / (numArms + 2));
+    CRGB color2 = ColorFromPalette(palette, (float)context.now * 0.1f + 15 + i * 255 / (numArms + 2));
     const uint16_t color565_2 = convert888(color2);
 
     int16_t x1 = centerX + cos(angle1) * panel->width() / 4;
     int16_t y1 = centerY + sin(angle1) * panel->width() / 4;
     panel->drawLine(centerX, centerY, x1, y1, color565_2);
 
-    CRGB color3 = ColorFromPalette(palette, (float)context.elapsed * 0.1f + 30 + i * 255 / (numArms + 2));
+    CRGB color3 = ColorFromPalette(palette, (float)context.now * 0.1f + 30 + i * 255 / (numArms + 2));
     const uint16_t color565_3 = convert888(color3);
 
     float angle2 = angle1 + (smoothValue * 1.5 + 0.5) * M_PI * 2.0;
@@ -336,13 +370,13 @@ void Starfish::draw(CRGB *leds, LEDContext &context)
   panel->drawToScreen(leds, context, true);
 }
 
-RingGame::RingGame()
+RingGameScene::RingGameScene()
 {
 }
 
-void RingGame::start(LEDContext &context)
+void RingGameScene::start(LEDContext &context)
 {
-  startTime = context.elapsed;
+  startTime = context.now;
 
   score = 0;
   playerAngle = 0;
@@ -352,13 +386,13 @@ void RingGame::start(LEDContext &context)
   ballVel = vec3(cos(angle) * speed, sin(angle) * speed, 0);
 }
 
-void RingGame::draw(CRGB *leds, LEDContext &context)
+void RingGameScene::draw(CRGB *leds, LEDContext &context)
 {
-  MemoryPanel *p = context.sharedPanel;
+  LEDPanel *p = context.panel;
 
-  playerAngle = float(context.remoteDist) / 255 * M_PI * 2.0 * 2.0;
+  // playerAngle = float(context.remoteDist) / 255 * M_PI * 2.0 * 2.0;
 
-  const int difficulty = (context.elapsed - startTime) / 10000;
+  const int difficulty = (context.now - startTime) / 10000;
   float speedModifier = float(difficulty) * 0.2 + 1.0;
   ball = v3_add(ball, v3_muls(ballVel, speedModifier));
 
