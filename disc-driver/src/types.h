@@ -10,10 +10,6 @@
 
 #define BUTTON_PIN 22
 
-#define SCENE_TIME 21
-#define PALETTE_TIME 13
-#define PALETTE_BLEND_TIME_MS 10
-
 // Rings
 // 48, 43, 40, 32, 29, 24, 20. 12, 6, 1
 const uint8_t kRingIndexMap[NUM_RINGS][2] = {
@@ -44,30 +40,15 @@ typedef struct
   float pixelCoordsf[NUM_PIXELS][2];       // x, y => -0.5->0.5
   float pixelCoordsPolarf[NUM_PIXELS][2];  // r, theta => 0-0.5, 0-2pi
 
-  // CRGBPalette16 *curPalette;
+  // Button data
+  bool buttonPressed = false;
+  bool buttonHeld = false;
+  unsigned long buttonChangeTime = 0;
 
-  bool buttonState = false;
-  bool buttonHold = false;
-  unsigned long buttonDownTime = 0;
-  bool buttonUpHandled = true;
-  bool buttonDownHandled = true;
-  bool buttonHoldHandled = true;
-
-  // Remote data
-  // uint8_t remoteDist = 127;
-  // unsigned long remoteDistTime = 0;
-
-  // bool button1State = false;
-  // unsigned long button1DownTime = 0;
-  // bool button1DownHandled = true;
-  // unsigned long button1UpTime = 0;
-  // bool button1UpHandled = true;
-
-  // bool button2State = false;
-  // unsigned long button2DownTime = 0;
-  // bool button2DownHandled = true;
-  // unsigned long button2UpTime = 0;
-  // bool button2UpHandled = true;
+  bool buttonDidTap = false;
+  bool buttonDidRelease = false;
+  bool buttonDidPress = false;
+  bool buttonDidHold = false;
 } LEDContext;
 
 #endif

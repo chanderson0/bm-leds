@@ -13,8 +13,12 @@ CRGB leds[NUM_PIXELS];
 
 LEDContext context;
 
-bool rawButtonDown = false;
-unsigned long rawButtonDownTime = 0;
+bool buttonPressed = false;
+bool lastButtonReading = false;
+unsigned long buttonReadingChangeTime = 0;
+const uint16_t kButtonDebounceMs = 50;
+const uint16_t kButtonTapTimeMs = 250;
+const uint16_t kButtonHoldTimeMs = 750;
 
 Scene *scenes[32];
 int kNumScenes = 0;
@@ -24,20 +28,8 @@ uint8_t curScene = 0;
 extern const TProgmemRGBGradientPalettePtr gGradientPalettes[];
 extern const uint8_t gGradientPaletteCount;
 
-void setup()
+void computeLEDs()
 {
-  Serial.begin(115200);
-  Serial.println("Start init");
-
-  // Assign pattern
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  // Startup LEDs
-  Serial.println("LED setup...");
-  FastLED.addLeds<APA102, DATAPIN, CLOCKPIN, BGR, DATA_RATE_MHZ(4)>(leds, NUM_PIXELS);
-  FastLED.setMaxPowerInVoltsAndMilliamps(5, 100);
-  FastLED.setBrightness(64);
-
   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
   {
     uint8_t ring = 0;
@@ -74,31 +66,54 @@ void setup()
     context.pixelCoordsf[i][0] = xNorm;
     context.pixelCoordsf[i][1] = yNorm;
   }
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  Serial.println("Start init");
+
+  // Assign pattern
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+  // Startup LEDs
+  Serial.println("LED setup...");
+  FastLED.addLeds<APA102, DATAPIN, CLOCKPIN, BGR, DATA_RATE_MHZ(4)>(leds, NUM_PIXELS);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, 100);
+  FastLED.setBrightness(64);
+
+  // Compute LED coordinates
+  computeLEDs();
 
   // Build panel
   context.panel = new LEDPanel(32, 32);
   context.panel->setRotation(1);
 
   PatternScene *patternScene = new PatternScene(16, gGradientPalettes, gGradientPaletteCount);
-  patternScene->addPattern(new Pattern0());
-  patternScene->addPattern(new Pattern1());
-  // patternScene->addPattern(new Pattern2());
-  patternScene->addPattern(new Pattern3());
-  patternScene->addPattern(new Pattern4());
-  patternScene->addPattern(new Pattern5());
-  patternScene->addPattern(new Pattern6());
-  patternScene->addPattern(new Pattern7());
-  patternScene->addPattern(new Pattern8());
-  patternScene->addPattern(new Pattern9());
-  patternScene->addPattern(new Pattern10());
-  patternScene->addPattern(new Pattern11());
+  patternScene->addPattern(new PatternNoise());      // 5/5
+  patternScene->addPattern(new PatternDiamonds());   // 4/5
+  patternScene->addPattern(new PatternWhirlpool2()); // 4/5
+  patternScene->addPattern(new PatternWavyArms());   // 4/5
+  patternScene->addPattern(new PatternSineHills());  // 4/5
+  patternScene->addPattern(new PatternNautilus());   // 3/5
+
+  // patternScene->addPattern(new PatternWhirlpool()); // 3/5
+  // patternScene->addPattern(new PatternConcentricRings()); // 0/5
+  // patternScene->addPattern(new PatternStripe()); // 1/5
+  // patternScene->addPattern(new PatternWhirlpool3()); // 3/5
+  // patternScene->addPattern(new PatternWaves()); // 2/5
+  // patternScene->addPattern(new PatternLissajous()); // 2/5
+  // patternScene->addPattern(new PatternTriangles()); // 2/5
+  // patternScene->addPattern(new PatternGameOfLife()); // unfinished
 
   // Build scenes
   randomSeed(micros() + analogRead(1) + micros() + analogRead(2) + micros());
   scenes[kNumScenes++] = patternScene;
+  scenes[kNumScenes++] = new Eyes();
   scenes[kNumScenes++] = new SpinGameScene();
   scenes[kNumScenes++] = new EightballScene();
 
+  // Start the first scene
   scenes[0]->start(context);
 
   Serial.println("Done init!");
@@ -117,51 +132,55 @@ void advanceScene()
 
 void readButton()
 {
-  bool newButtonDown = !digitalRead(BUTTON_PIN);
-  // Serial.println(newButtonDown ? "down" : "up");
+  const bool reading = !digitalRead(BUTTON_PIN);
 
-  if (newButtonDown && rawButtonDownTime == 0)
+  // Reset debounce timer
+  if (reading != lastButtonReading)
   {
-    rawButtonDown = true;
-    rawButtonDownTime = context.now;
-  }
-  else if (!newButtonDown && rawButtonDownTime != 0)
-  {
-    rawButtonDown = false;
-    rawButtonDownTime = 0;
+    lastButtonReading = reading;
+    buttonReadingChangeTime = context.now;
   }
 
-  // On release
-  if (!rawButtonDown && context.buttonState)
+  // If it hasn't changed in a fixed amount of time, assume it's a true value
+  if (context.now - buttonReadingChangeTime > kButtonDebounceMs)
   {
-    Serial.println("Button relase");
-    context.buttonState = false;
-    context.buttonHold = false;
-    context.buttonDownTime = 0;
-    context.buttonDownHandled = true;
-    context.buttonHoldHandled = true;
-    context.buttonUpHandled = false;
+    Serial.println(reading ? "down" : "up");
+    buttonPressed = reading;
   }
 
-  // On press for 25ms
-  if (rawButtonDown && !context.buttonState && context.now - rawButtonDownTime > 25)
+  // Reset instant events
+  context.buttonDidPress = false;
+  context.buttonDidRelease = false;
+  context.buttonDidTap = false;
+  context.buttonDidHold = false;
+
+  // Read new state
+  if (context.buttonPressed != buttonPressed)
   {
-    Serial.println("Button press");
-    context.buttonState = true;
-    context.buttonHold = false;
-    context.buttonDownTime = context.now;
-    context.buttonDownHandled = false;
-    context.buttonHoldHandled = true;
-    context.buttonUpHandled = true;
+    // Assign press and release instant states
+    context.buttonDidPress = buttonPressed;
+    context.buttonDidRelease = !buttonPressed;
+
+    // On falling edge, do some additional checks
+    if (!buttonPressed)
+    {
+      context.buttonHeld = false;
+
+      if (context.now - context.buttonChangeTime < kButtonTapTimeMs)
+      {
+        context.buttonDidTap = true;
+      }
+    }
+
+    // Set the general states
+    context.buttonPressed = buttonPressed;
+    context.buttonChangeTime = context.now;
   }
 
-  // On press for 500ms
-  if (context.buttonState && !context.buttonHold && context.now - context.buttonDownTime > 500)
+  if (context.buttonPressed && !context.buttonHeld && (context.now - context.buttonChangeTime) > kButtonHoldTimeMs)
   {
-    Serial.println("Button hold");
-    context.buttonHold = true;
-    context.buttonHoldHandled = false;
-    context.buttonUpHandled = true;
+    context.buttonHeld = true;
+    context.buttonDidHold = true;
   }
 }
 
@@ -172,9 +191,13 @@ void loop()
 
   scenes[curScene]->draw(leds, context);
 
-  if (!context.buttonHoldHandled) {
+  if (context.buttonDidHold)
+  {
     advanceScene();
-    context.buttonHoldHandled = true;
+  }
+  if (context.buttonPressed)
+  {
+    leds[0] = CRGB(255, 0, 0);
   }
 
   FastLED.show();

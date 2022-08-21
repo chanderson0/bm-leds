@@ -37,41 +37,24 @@ DEFINE_GRADIENT_PALETTE(fire_gp){
     250, 252, 255, 111,
     255, 255, 255, 255};
 
-// Gradient palette "My_Heart_Is_Crippled_gp", originally from
-// http://soliton.vm.bytemark.co.uk/pub/cpt-city/colo/lightningmccarl/tn/My_Heart_Is_Crippled.png.index.html
-// converted for FastLED with gammas (2.6, 2.2, 2.5)
-// Size: 40 bytes of program space.
-
-DEFINE_GRADIENT_PALETTE(My_Heart_Is_Crippled_gp){
-    0, 255, 199, 93,
-    61, 255, 199, 93,
-    61, 190, 107, 55,
-    96, 190, 107, 55,
-    96, 135, 45, 29,
-    104, 135, 45, 29,
-    104, 92, 10, 12,
-    181, 92, 10, 12,
-    181, 58, 1, 3,
-    255, 58, 1, 3};
-
-DEFINE_GRADIENT_PALETTE(white_gp){
-    0,
-    30,
-    30,
-    30,
-    50,
-    50,
-    50,
-    50,
-    127,
-    30,
-    30,
-    30,
-    255,
-    0,
-    0,
-    0,
-};
+// DEFINE_GRADIENT_PALETTE(white_gp){
+//     0,
+//     30,
+//     30,
+//     30,
+//     50,
+//     50,
+//     50,
+//     50,
+//     127,
+//     30,
+//     30,
+//     30,
+//     255,
+//     0,
+//     0,
+//     0,
+// };
 
 DEFINE_GRADIENT_PALETTE(red_gp){
     0,
@@ -146,6 +129,10 @@ DEFINE_GRADIENT_PALETTE(rgi_03_gp){
     191, 11, 3, 52,
     223, 16, 4, 45,
     255, 22, 6, 38};
+// 223, 16, 4, 45,
+// 191, 11, 3, 52,
+// 95, 80, 27, 32,
+// 0, 247, 79, 17};
 
 // Gradient palette "Paired_05_gp", originally from
 // http://soliton.vm.bytemark.co.uk/pub/cpt-city/cb/qual/tn/Paired_05.png.index.html
@@ -159,13 +146,42 @@ DEFINE_GRADIENT_PALETTE(Paired_05_gp){
     153, 3, 91, 3,
     204, 244, 84, 71};
 
+// Gradient palette "bhw2_xc_gp", originally from
+// http://soliton.vm.bytemark.co.uk/pub/cpt-city/bhw/bhw2/tn/bhw2_xc.png.index.html
+// converted for FastLED with gammas (2.6, 2.2, 2.5)
+// Size: 28 bytes of program space.
+
+DEFINE_GRADIENT_PALETTE(bhw2_xc_gp){
+    0, 4, 2, 9,
+    58, 16, 0, 47,
+    122, 24, 0, 16,
+    158, 144, 9, 1,
+    183, 179, 45, 1,
+    219, 220, 114, 2,
+    255, 234, 237, 1};
+
+// Gradient palette "aquamarinemermaid_gp", originally from
+// http://soliton.vm.bytemark.co.uk/pub/cpt-city/rc/tn/aquamarinemermaid.png.index.html
+// converted for FastLED with gammas (2.6, 2.2, 2.5)
+// Size: 20 bytes of program space.
+
+DEFINE_GRADIENT_PALETTE(aquamarinemermaid_gp){
+    0, 23, 4, 32,
+    63, 98, 31, 52,
+    127, 224, 138, 24,
+    155, 0, 0, 0,
+    191, 7, 55, 164,
+    255, 23, 4, 32};
+
 const TProgmemRGBGradientPalettePtr gGradientPalettes[] = {
     fire_gp,
-    // rainbow_gp,
-    rgi_03_gp,
     Caribbean_gp,
+    aquamarinemermaid_gp,
+    rgi_03_gp,
+    bhw2_xc_gp,
     Paired_05_gp,
-    red_gp,
+    // rainbow_gp,
+    // red_gp,
 };
 
 // Count of how many cpt-city gradients are defined:

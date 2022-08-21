@@ -6,6 +6,11 @@
 
 #include <Fonts/FreeSansOblique12pt7b.h>
 
+const uint8_t kPatternTimeS = 21;
+// const uint16_t kPatternTimeS = 1000; // used for debugging patterns
+const uint16_t kPaletteTimeS = 13;
+const uint16_t kPaletteBlendTimeMs = 10;
+
 PatternScene::PatternScene(const int maxPatterns, const TProgmemRGBGradientPalettePtr palettes[], const int numPalettes)
 {
   patterns = (Pattern **)malloc(sizeof(Pattern *) * maxPatterns);
@@ -28,6 +33,8 @@ void PatternScene::start(LEDContext &context)
   curPaletteIdx = 0;
   curPattern = 0;
   patternAmt = 0;
+
+  shouldRotatePatterns = true;
 }
 
 void PatternScene::advancePattern(LEDContext &context)
@@ -55,17 +62,25 @@ void PatternScene::advancePalette(LEDContext &context)
 
 void PatternScene::draw(CRGB *leds, LEDContext &context)
 {
-  EVERY_N_SECONDS(SCENE_TIME)
+  if (context.buttonDidTap)
   {
-    advancePattern(context);
+    shouldRotatePatterns = !shouldRotatePatterns;
   }
 
-  EVERY_N_SECONDS(PALETTE_TIME)
+  EVERY_N_SECONDS(kPatternTimeS)
+  {
+    if (shouldRotatePatterns)
+    {
+      advancePattern(context);
+    }
+  }
+
+  EVERY_N_SECONDS(kPaletteTimeS)
   {
     advancePalette(context);
   }
 
-  EVERY_N_MILLISECONDS(PALETTE_BLEND_TIME_MS)
+  EVERY_N_MILLISECONDS(kPaletteBlendTimeMs)
   {
     nblendPaletteTowardPalette(curPalette, targetPalette, 64);
   }
@@ -105,21 +120,10 @@ void SpinGameScene::draw(CRGB *leds, LEDContext &context)
   bool inAnimation = started && context.now - startTime < duration;
   if (!inAnimation)
   {
-    if (!context.buttonDownHandled)
+    if (context.buttonDidTap)
     {
-      context.buttonDownHandled = true;
       startSpin(context);
     }
-  }
-
-  if (!started)
-  {
-    context.panel->fillScreen(0);
-    context.panel->setCursor(10, 13);
-    context.panel->setTextColor(0xF800);
-    context.panel->println("->");
-    context.panel->drawToScreen(leds, context, true);
-    return;
   }
 
   float a = easeInOutQuad(constrain(context.now - startTime, 0, duration), startAngle, endAngle, duration);
@@ -135,46 +139,48 @@ void SpinGameScene::draw(CRGB *leds, LEDContext &context)
 
     float diff = abs(angleDiff(tf, curAngle));
     uint8_t b = 0;
+
+    uint8_t on = 255;
     if (r < 50)
     {
       if (diff < 0.5)
       {
-        b = 50;
+        b = on;
       }
     }
     else if (r < 170)
     {
       if (diff < 0.2)
       {
-        b = 50;
+        b = on;
       }
     }
     else if (r < 190)
     {
       if (diff < 0.4)
       {
-        b = 50;
+        b = on;
       }
     }
     else if (r < 215)
     {
       if (diff < 0.2)
       {
-        b = 50;
+        b = on;
       }
     }
     else if (r < 235)
     {
       if (diff < 0.1)
       {
-        b = 50;
+        b = on;
       }
     }
     else
     {
       if (diff < 0.05)
       {
-        b = 50;
+        b = on;
       }
     }
 
@@ -182,12 +188,11 @@ void SpinGameScene::draw(CRGB *leds, LEDContext &context)
     {
       if (r < thresh)
       {
-        b = 80;
+        b = on;
       }
     }
 
     leds[i] = CHSV(0, 255, b);
-    // ColorFromPalette(palette, t, b);
   }
 }
 
@@ -284,11 +289,10 @@ void EightballScene::draw(CRGB *leds, LEDContext &context)
   }
   else if (state == EightBallIdle)
   {
-    if (!context.buttonDownHandled)
+    if (context.buttonDidTap)
     {
       loops = 0;
       newPrediction(context);
-      context.buttonDownHandled = true;
     }
 
     panel->fillScreen(0);
@@ -318,170 +322,188 @@ void EightballScene::draw(CRGB *leds, LEDContext &context)
   }
 }
 
-StarfishScene::StarfishScene()
+// StarfishScene::StarfishScene()
+// {
+//   palette = Coral_reef_gp;
+// }
+
+// void StarfishScene::start(LEDContext &context)
+// {
+//   startTime = context.now;
+//   smoothValue = 127;
+// }
+
+// void StarfishScene::draw(CRGB *leds, LEDContext &context)
+// {
+//   LEDPanel *panel = context.panel;
+
+//   float dist = 0.5f;
+//   // if (context.elapsed - context.remoteDistTime < 200)
+//   // {
+//   //   uint8_t realDist = map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255);
+//   //   dist = 1.0 - (float)(realDist) / 255.0f;
+//   // }
+//   smoothValue += (dist - smoothValue) * 0.2;
+
+//   const uint16_t centerX = panel->width() / 2;
+//   const uint16_t centerY = panel->height() / 2;
+
+//   panel->fillScreen(0);
+
+//   static const int numArms = 7;
+//   for (int i = 0; i < numArms; ++i)
+//   {
+//     float angle1 = (float)i / numArms * M_PI * 2.0f + smoothValue * M_PI;
+
+//     CRGB color2 = ColorFromPalette(palette, (float)context.now * 0.1f + 15 + i * 255 / (numArms + 2));
+//     const uint16_t color565_2 = convert888(color2);
+
+//     int16_t x1 = centerX + cos(angle1) * panel->width() / 4;
+//     int16_t y1 = centerY + sin(angle1) * panel->width() / 4;
+//     panel->drawLine(centerX, centerY, x1, y1, color565_2);
+
+//     CRGB color3 = ColorFromPalette(palette, (float)context.now * 0.1f + 30 + i * 255 / (numArms + 2));
+//     const uint16_t color565_3 = convert888(color3);
+
+//     float angle2 = angle1 + (smoothValue * 1.5 + 0.5) * M_PI * 2.0;
+//     int16_t x2 = x1 + cos(angle2) * panel->width() / 5;
+//     int16_t y2 = y1 + sin(angle2) * panel->width() / 5;
+//     panel->drawLine(x1, y1, x2, y2, color565_3);
+//   }
+
+//   panel->drawToScreen(leds, context, true);
+// }
+
+// RingGameScene::RingGameScene()
+// {
+// }
+
+// void RingGameScene::start(LEDContext &context)
+// {
+//   startTime = context.now;
+
+//   score = 0;
+//   playerAngle = 0;
+//   ball = vec3(0, 0, 0);
+//   float angle = randFloat() * M_PI * 2.0;
+//   const float speed = 0.001;
+//   ballVel = vec3(cos(angle) * speed, sin(angle) * speed, 0);
+// }
+
+// void RingGameScene::draw(CRGB *leds, LEDContext &context)
+// {
+//   LEDPanel *p = context.panel;
+
+//   // playerAngle = float(context.remoteDist) / 255 * M_PI * 2.0 * 2.0;
+
+//   const int difficulty = (context.now - startTime) / 10000;
+//   float speedModifier = float(difficulty) * 0.2 + 1.0;
+//   ball = v3_add(ball, v3_muls(ballVel, speedModifier));
+
+//   float ballAngle = atan2(ball.y, ball.x);
+//   const float playerBallDiff = abs(angleDiff(ballAngle, playerAngle));
+
+//   const float dist = v3_length(ball);
+//   if (dist > 0.5)
+//   {
+//     if (playerBallDiff < M_PI * 0.3)
+//     {
+//       vec3_t norm = v3_norm(v3_muls(ball, -1));
+//       norm = m4_mul_dir(m4_rotation_z(randFloat() * 0.1 - 0.05), norm);
+//       norm = v3_norm(norm);
+
+//       vec3_t refl = v3_sub(ballVel, v3_muls(norm, 2.0f * v3_dot(ballVel, norm)));
+//       ballVel = refl;
+//       score++;
+//     }
+//     else
+//     {
+//       return start(context);
+//     }
+//   }
+
+//   p->fillScreen(0);
+//   p->fillCircle((ball.x + 0.5) * p->width(), (ball.y + 0.5) * p->height(), p->width() / 15, convert888(CHSV(score * 50, qadd8(50, qmul8(difficulty, 75)), 255)));
+//   p->drawToScreen(leds, context, false);
+
+//   for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+//   {
+//     const uint8_t r = context.pixelCoordsPolar[i][0];
+//     const float t = context.pixelCoordsPolarf[i][1];
+//     const float diff = abs(angleDiff(t, playerAngle));
+
+//     if (r > 225 && diff < M_PI * 0.25)
+//     {
+//       leds[i] = CRGB::White;
+//     }
+//   }
+// }
+
+Eyes::Eyes()
 {
-  palette = Coral_reef_gp;
 }
 
-void StarfishScene::start(LEDContext &context)
+void Eyes::start(LEDContext &context)
 {
-  startTime = context.now;
-  smoothValue = 127;
+  eyeColor = CRGB(255, 255, 255);
+  pupilColor = CRGB(0, 0, 0);
+  nTaps = 0;
 }
 
-void StarfishScene::draw(CRGB *leds, LEDContext &context)
+void Eyes::draw(CRGB *leds, LEDContext &context)
 {
-  LEDPanel *panel = context.panel;
-
-  float dist = 0.5f;
-  // if (context.elapsed - context.remoteDistTime < 200)
-  // {
-  //   uint8_t realDist = map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255);
-  //   dist = 1.0 - (float)(realDist) / 255.0f;
-  // }
-  smoothValue += (dist - smoothValue) * 0.2;
-
-  const uint16_t centerX = panel->width() / 2;
-  const uint16_t centerY = panel->height() / 2;
-
-  panel->fillScreen(0);
-
-  static const int numArms = 7;
-  for (int i = 0; i < numArms; ++i)
+  if (context.buttonDidTap)
   {
-    float angle1 = (float)i / numArms * M_PI * 2.0f + smoothValue * M_PI;
-
-    CRGB color2 = ColorFromPalette(palette, (float)context.now * 0.1f + 15 + i * 255 / (numArms + 2));
-    const uint16_t color565_2 = convert888(color2);
-
-    int16_t x1 = centerX + cos(angle1) * panel->width() / 4;
-    int16_t y1 = centerY + sin(angle1) * panel->width() / 4;
-    panel->drawLine(centerX, centerY, x1, y1, color565_2);
-
-    CRGB color3 = ColorFromPalette(palette, (float)context.now * 0.1f + 30 + i * 255 / (numArms + 2));
-    const uint16_t color565_3 = convert888(color3);
-
-    float angle2 = angle1 + (smoothValue * 1.5 + 0.5) * M_PI * 2.0;
-    int16_t x2 = x1 + cos(angle2) * panel->width() / 5;
-    int16_t y2 = y1 + sin(angle2) * panel->width() / 5;
-    panel->drawLine(x1, y1, x2, y2, color565_3);
-  }
-
-  panel->drawToScreen(leds, context, true);
-}
-
-RingGameScene::RingGameScene()
-{
-}
-
-void RingGameScene::start(LEDContext &context)
-{
-  startTime = context.now;
-
-  score = 0;
-  playerAngle = 0;
-  ball = vec3(0, 0, 0);
-  float angle = randFloat() * M_PI * 2.0;
-  const float speed = 0.001;
-  ballVel = vec3(cos(angle) * speed, sin(angle) * speed, 0);
-}
-
-void RingGameScene::draw(CRGB *leds, LEDContext &context)
-{
-  LEDPanel *p = context.panel;
-
-  // playerAngle = float(context.remoteDist) / 255 * M_PI * 2.0 * 2.0;
-
-  const int difficulty = (context.now - startTime) / 10000;
-  float speedModifier = float(difficulty) * 0.2 + 1.0;
-  ball = v3_add(ball, v3_muls(ballVel, speedModifier));
-
-  float ballAngle = atan2(ball.y, ball.x);
-  const float playerBallDiff = abs(angleDiff(ballAngle, playerAngle));
-
-  const float dist = v3_length(ball);
-  if (dist > 0.5)
-  {
-    if (playerBallDiff < M_PI * 0.3)
+    if (++nTaps % 4 == 0)
     {
-      vec3_t norm = v3_norm(v3_muls(ball, -1));
-      norm = m4_mul_dir(m4_rotation_z(randFloat() * 0.1 - 0.05), norm);
-      norm = v3_norm(norm);
-
-      vec3_t refl = v3_sub(ballVel, v3_muls(norm, 2.0f * v3_dot(ballVel, norm)));
-      ballVel = refl;
-      score++;
+      eyeColor = CRGB(255, 255, 255);
+      pupilColor = CRGB(0, 0, 0);
     }
     else
     {
-      return start(context);
+      eyeColor = CHSV(random8(), 255, 255);
+      pupilColor = CHSV(random8(), 255, 255);
     }
   }
+
+  LEDPanel *p = context.panel;
+
+  const float w = p->width();
+  const float h = p->height();
+  const float lX = w * 1.0 / 4.0;
+  const float rX = w * 3.0 / 4.0;
+  const float cY = h / 2.0;
+  const float largeR = w / 4.0;
+  const float smallR = w / 10.0;
 
   p->fillScreen(0);
-  p->fillCircle((ball.x + 0.5) * p->width(), (ball.y + 0.5) * p->height(), p->width() / 15, convert888(CHSV(score * 50, qadd8(50, qmul8(difficulty, 75)), 255)));
-  p->drawToScreen(leds, context, false);
 
-  for (uint8_t i = 0; i < NUM_PIXELS; ++i)
+  // Eyes
+  p->fillCircle(lX, cY, largeR, convert888(eyeColor));
+  p->fillCircle(rX, cY, largeR, convert888(eyeColor));
+
+  // Pupils
+  float eyeMoveXAmt = (float)(inoise8(context.now * 0.2)) / 255.f;
+  float eyeMoveYAmt = (float)(inoise8(context.now * 0.1 + 4.5)) / 255.f;
+  float eyeMovementX = (eyeMoveXAmt - 0.5) * 2.0 * smallR * 1.0;
+  float eyeMovementY = (eyeMoveYAmt - 0.5) * 2.0 * smallR * 0.8;
+  p->fillCircle(lX + eyeMovementX, cY + eyeMovementY + smallR, smallR, convert888(pupilColor));
+  p->fillCircle(rX + eyeMovementX, cY + eyeMovementY + smallR, smallR, convert888(pupilColor));
+
+  // Blink
+  uint8_t blinkAmt = inoise8(context.now * 0.35 + 20);
+  if (blinkAmt > 200)
   {
-    const uint8_t r = context.pixelCoordsPolar[i][0];
-    const float t = context.pixelCoordsPolarf[i][1];
-    const float diff = abs(angleDiff(t, playerAngle));
+    uint8_t blinkKind = blinkAmt > 225 ? 0 : 2;
+    p->fillCircle(lX, cY - blinkKind, largeR, 0); // Eyelids are always black
+    p->fillCircle(rX, cY - blinkKind, largeR, 0);
+  }
 
-    if (r > 225 && diff < M_PI * 0.25)
-    {
-      leds[i] = CRGB::White;
-    }
+  p->drawToScreen(drawBuffer, context, false);
+
+  // Blend so we don't have as many flashing artifacts
+  EVERY_N_MILLISECONDS(5)
+  {
+    nblend(leds, drawBuffer, NUM_PIXELS, 15);
   }
 }
-
-// Eyes::Eyes()
-// {
-// }
-
-// void Eyes::start(LEDContext &context)
-// {
-// }
-
-// void Eyes::draw(CRGB *leds, LEDContext &context)
-// {
-//   MemoryPanel *p = context.sharedPanel;
-
-//   float dist = sin(float(context.elapsed) / 500.0f);
-//   dist = pow(dist, 3.0);
-//   dist = dist * 0.5 + 0.5;
-//   if (context.elapsed - context.remoteDistTime < 200)
-//   {
-//     dist = float(map(constrain(context.remoteDist, 10, 200), 10, 200, 0, 255)) / 255.0f;
-//   }
-
-//   const float w = p->width();
-//   const float h = p->height();
-//   const float lX = w * 1.0 / 4.0;
-//   const float rX = w * 3.0 / 4.0;
-//   const float cY = h / 2.0;
-//   const float largeR = w / 4.0;
-//   const float smallR = w / 10.0;
-
-//   p->fillScreen(0);
-
-//   // Eyes
-//   p->fillCircle(lX, cY, largeR, convert888(CHSV(0, 0, 150)));
-//   p->fillCircle(rX, cY, largeR, convert888(CHSV(0, 0, 150)));
-
-//   // Pupils
-//   float eyeMovement = (dist - 0.5) * 2.0 * smallR;
-//   p->fillCircle(lX + eyeMovement, cY + smallR, smallR, convert888(CHSV(0, 0, 0)));
-//   p->fillCircle(rX + eyeMovement, cY + smallR, smallR, convert888(CHSV(0, 0, 0)));
-
-//   // Blink
-//   uint8_t n = inoise8(context.elapsed * 0.35);
-//   if (n > 200)
-//   {
-//     uint8_t blinkAmt = n > 225 ? 0 : 2;
-//     p->fillCircle(lX, cY - blinkAmt, largeR, convert888(CHSV(0, 0, 0)));
-//     p->fillCircle(rX, cY - blinkAmt, largeR, convert888(CHSV(0, 0, 0)));
-//   }
-
-//   p->drawToScreen(leds, context, false);
-// }

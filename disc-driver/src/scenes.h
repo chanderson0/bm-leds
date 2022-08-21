@@ -49,6 +49,8 @@ private:
   uint8_t curPaletteIdx = 0;
   CRGBPalette16 curPalette;
   CRGBPalette16 targetPalette;
+
+  bool shouldRotatePatterns = true;
 };
 
 class SpinGameScene : public Scene
@@ -107,39 +109,46 @@ private:
   CRGBPalette16 palette;
 };
 
-class StarfishScene : public Scene
-{
-public:
-  StarfishScene();
-  void start(LEDContext &context) override;
-  void draw(CRGB *leds, LEDContext &context) override;
-
-private:
-  float smoothValue;
-  CRGBPalette16 palette;
-};
-
-class RingGameScene : public Scene
-{
-public:
-  RingGameScene();
-  void start(LEDContext &context) override;
-  void draw(CRGB *leds, LEDContext &context) override;
-
-private:
-  vec3_t ball, ballVel;
-  float playerAngle;
-  int score;
-
-  unsigned long stateStartTime;
-};
-
-// class Eyes : public Game
+// class StarfishScene : public Scene
 // {
 // public:
-//   Eyes();
+//   StarfishScene();
 //   void start(LEDContext &context) override;
 //   void draw(CRGB *leds, LEDContext &context) override;
+
+// private:
+//   float smoothValue;
+//   CRGBPalette16 palette;
 // };
+
+// class RingGameScene : public Scene
+// {
+// public:
+//   RingGameScene();
+//   void start(LEDContext &context) override;
+//   void draw(CRGB *leds, LEDContext &context) override;
+
+// private:
+//   vec3_t ball, ballVel;
+//   float playerAngle;
+//   int score;
+
+//   unsigned long stateStartTime;
+// };
+
+class Eyes : public Scene
+{
+public:
+  Eyes();
+  void start(LEDContext &context) override;
+  void draw(CRGB *leds, LEDContext &context) override;
+
+private:
+  CRGB drawBuffer[NUM_PIXELS];
+
+  CRGB eyeColor = CRGB::White;
+  CRGB pupilColor = CRGB::Black;
+  uint16_t nTaps = 0;
+};
 
 #endif

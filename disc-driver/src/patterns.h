@@ -4,7 +4,7 @@
 #include "FastLED.h"
 #include "types.h"
 
-#define PATTERN_CLASS_N(n)                                                       \
+#define PATTERN_CLASS(n)                                                         \
   class Pattern##n : public Pattern                                              \
   {                                                                              \
   public:                                                                        \
@@ -18,25 +18,36 @@ public:
   virtual void draw(CRGB *leds, LEDContext &context, CRGBPalette16 *palette) { Serial.println(context.now); };
 };
 
-PATTERN_CLASS_N(0)
-PATTERN_CLASS_N(1)
-PATTERN_CLASS_N(2)
-PATTERN_CLASS_N(3)
-PATTERN_CLASS_N(4)
-PATTERN_CLASS_N(5)
-PATTERN_CLASS_N(6)
-PATTERN_CLASS_N(7)
-PATTERN_CLASS_N(8)
-PATTERN_CLASS_N(9)
-PATTERN_CLASS_N(10)
-PATTERN_CLASS_N(11)
+PATTERN_CLASS(Whirlpool)
+PATTERN_CLASS(ConcentricRings)
+PATTERN_CLASS(Stripe)
+PATTERN_CLASS(Diamonds)
+PATTERN_CLASS(Whirlpool2)
+PATTERN_CLASS(Whirlpool3)
+PATTERN_CLASS(WavyArms)
+PATTERN_CLASS(Waves)
+PATTERN_CLASS(Nautilus)
+PATTERN_CLASS(SineHills)
+PATTERN_CLASS(Triangles)
+PATTERN_CLASS(Lissajous)
+PATTERN_CLASS(Noise)
+// PATTERN_CLASS(Ribbons)
 
-// class PatternFoo : public Pattern
-// {
-// public:
-//   void draw(CRGB *leds, LEDContext &context) override;
-// protected:
-//   int balls;
-// };
+#define PATTERN_GOL_SIZE 16
+
+class PatternGameOfLife : public Pattern
+{
+public:
+  PatternGameOfLife();
+  void draw(CRGB *leds, LEDContext &context, CRGBPalette16 *palette) override;
+
+protected:
+  int updateBoard();
+  void randomBoard();
+
+  bool board[PATTERN_GOL_SIZE][PATTERN_GOL_SIZE];
+  bool nextBoard[PATTERN_GOL_SIZE][PATTERN_GOL_SIZE];
+  bool prevBoard[PATTERN_GOL_SIZE][PATTERN_GOL_SIZE];
+};
 
 #endif
